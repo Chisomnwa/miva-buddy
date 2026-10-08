@@ -14,6 +14,12 @@ The product promise is:
 
 > Help a student understand what they are learning, practise relevant DSA with appropriate guidance, and notice when skills from their coursework genuinely appear in real software engineering work.
 
+## Student identity and persistence
+
+The MVP must have no user-facing account or sign-in ceremony. On first use, a student completes one lightweight profile screen and enters the application. Do not request an email address or password, require email verification, provide password reset, or require SMTP/email infrastructure. Supabase anonymous authentication establishes a stable internal user ID without exposing an authentication step. Persist the profile and application data in Supabase/PostgreSQL and isolate each browser identity with server-verified sessions and row-level security.
+
+The MVP guarantees continuity only in the same browser while its session data remains available. Clearing browser data or changing devices may make an anonymous profile inaccessible; cross-device restoration and account recovery are deferred beyond the MVP. Proper user-facing account authentication may be considered after the MVP.
+
 The product is inspired by the community first approach of Lilo Companion, adapted around the learning journey of Miva Computer Science and Software Engineering students. It should not become a generic collection of AI tools with Miva branding.
 
 ## 2. Target User

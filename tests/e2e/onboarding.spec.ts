@@ -1,0 +1,153 @@
+import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+
+const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+const runHostedSupabaseTests = process.env.RUN_HOSTED_SUPABASE_TESTS === "1";
+
+test("unconfigured instance explains the required setup", async ({ page }) => {
+  test.skip(configured, "A configured project opens directly to onboarding.");
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Connect your Supabase project" })).toBeVisible();
+  const accessibility = await new AxeBuilder({ page }).analyze();
+  expect(accessibility.violations).toEqual([]);
+});
+
+test("first visit opens onboarding without an authentication ceremony", async ({ page }) => {
+  test.skip(!configured, "Requires a configured Supabase project.");
+  await page.goto("/");
+  await expect(page).toHaveURL(/onboarding/);
+  await expect(page.getByRole("heading", { name: "Welcome to your study space" })).toBeVisible();
+  await expect(page.getByLabel(/email|password|sign in|sign up/i)).toHaveCount(0);
+  const accessibility = await new AxeBuilder({ page }).analyze();
+  expect(accessibility.violations).toEqual([]);
+});
+
+test("profile submission creates a browser identity, persists, and remains isolated", async ({ page, browser }, testInfo) => {
+  test.setTimeout(120_000);
+  test.skip(!configured, "Requires a configured Supabase project.");
+  test.skip(!runHostedSupabaseTests, "Set RUN_HOSTED_SUPABASE_TESTS=1 to run hosted Auth integration checks; anonymous test users count against Supabase Auth rate limits.");
+  test.skip(testInfo.project.name !== "chromium", "Run hosted Auth integration once to avoid creating duplicate anonymous users.");
+  await page.goto("/onboarding");
+  await page.getByLabel("What are you studying?").selectOption("Computer Science");
+  await page.getByLabel("What level are you currently in?").selectOption("200 Level");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).toHaveURL(/home/, { timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "What would you like to learn today?" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // Primary navigation must remain reachable in keyboard focus order.
+  let learnFocused = false;
+  for (let i = 0; i < 10; i += 1) {
+    await page.keyboard.press("Tab");
+    if (await page.evaluate(() => document.activeElement?.getAttribute("href") === "/learn")) {
+      learnFocused = true;
+      break;
+    }
+  }
+  expect(learnFocused).toBe(true);
+
+  await expect(page.locator("a.nav-link[href='/home']:visible")).toHaveAttribute("aria-current", "page");
+  await expect(page.locator("a.nav-link[href='/learn']:visible")).toBeVisible();
+  await expect(page.locator("a.nav-link[href='/practice']:visible")).toBeVisible();
+  await expect(page.locator("a[href='/profile']:visible").first()).toBeVisible();
+
+  await page.reload();
+  await expect(page).toHaveURL(/home/, { timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "What would you like to learn today?" })).toBeVisible();
+  await page.locator("a[href='/profile']:visible").first().click();
+  await expect(page).toHaveURL(/profile/);
+  await expect(page.getByLabel("What level are you currently in?")).toHaveValue("200 Level");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await page.getByLabel("What are you studying?").selectOption("Software Engineering");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(/home/, { timeout: 20_000 });
+  await page.locator("a[href='/profile']:visible").first().click();
+  await expect(page).toHaveURL(/profile/);
+  await expect(page.getByLabel("What are you studying?")).toHaveValue("Software Engineering");
+
+  await page.locator("a.nav-link[href='/learn']:visible").first().click();
+  await expect(page).toHaveURL(/learn$/);
+  await expect(page.getByText("General explanation", { exact: true })).toBeVisible();
+  await expect(page.getByText(/No course material is attached/)).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByLabel("Ask a question").fill("Explain binary trees with a small example.");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page).toHaveURL(/\/learn\/[0-9a-f-]+$/i, { timeout: 20_000 });
+  await expect(page.locator(".learn-message-student .learn-message-content").filter({ hasText: /^Explain binary trees with a small example\.$/ })).toBeVisible();
+  await expect(page.getByText(/Let’s unpack Explain binary trees/)).toBeVisible();
+  const conversationUrl = page.url();
+  await page.reload();
+  await expect(page).toHaveURL(conversationUrl);
+  await expect(page.locator(".learn-message-student .learn-message-content").filter({ hasText: /^Explain binary trees with a small example\.$/ })).toBeVisible();
+  await page.locator("a.nav-link[href='/home']:visible").first().click();
+  await expect(page.getByRole("heading", { name: "Recent learning" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Explain binary trees with a small example/ })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const longProse = "A clear explanation should wrap within the phone screen without hiding the composer. ".repeat(10);
+  const longCodeLine = `const unusuallyLongIdentifierWithoutBreaks${"x".repeat(100)} = 42;`;
+  const mobilePrompt = [
+    "Please explain this code and long example.",
+    "",
+    longProse,
+    "",
+    "```js",
+    longCodeLine,
+    "```",
+  ].join("\n");
+  await page.locator("a.nav-link[href='/learn']:visible").first().click();
+  await expect(page).toHaveURL(/learn$/);
+  const composer = page.getByLabel("Ask a question");
+  await composer.fill(mobilePrompt);
+  const send = page.getByRole("button", { name: "Send" });
+  await expect(send).toBeVisible();
+  await send.click();
+  await expect(page).toHaveURL(/\/learn\/[0-9a-f-]+$/i, { timeout: 20_000 });
+  const mobileQuestion = page.locator(".learn-message-student").last();
+  await expect(mobileQuestion.locator("pre.learn-code-block code")).toContainText("unusuallyLongIdentifierWithoutBreaks");
+  await expect(composer).toHaveValue("");
+  const mobileLayout = await page.evaluate(() => {
+    const code = document.querySelector(".learn-code-block");
+    const transcript = document.querySelector(".learn-transcript");
+    const textarea = document.querySelector("#learn-message");
+    return {
+      pageWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+      codeWidth: code?.clientWidth ?? 0,
+      codeScrollWidth: code?.scrollWidth ?? 0,
+      transcriptWidth: transcript?.clientWidth ?? 0,
+      composerRight: textarea?.getBoundingClientRect().right ?? Infinity,
+    };
+  });
+  expect(mobileLayout.pageWidth).toBeLessThanOrEqual(mobileLayout.viewportWidth);
+  expect(mobileLayout.composerRight).toBeLessThanOrEqual(mobileLayout.viewportWidth);
+  expect(mobileLayout.codeWidth).toBeLessThanOrEqual(mobileLayout.transcriptWidth);
+  expect(mobileLayout.codeScrollWidth).toBeGreaterThan(mobileLayout.codeWidth);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  const separateBrowser = await browser.newContext();
+  const otherStudent = await separateBrowser.newPage();
+  await otherStudent.goto("/home");
+  await expect(otherStudent).toHaveURL(/onboarding/);
+  await expect(otherStudent.getByLabel("What level are you currently in?")).toHaveValue("100 Level");
+  await separateBrowser.close();
+});
+
+test("onboarding remains usable on a narrow viewport", async ({ page }) => {
+  test.skip(!configured, "Requires a configured Supabase project.");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/onboarding");
+  await expect(page.getByLabel("What are you studying?")).toBeVisible();
+  const pageWidth = await page.locator("body").evaluate((element) => element.scrollWidth);
+  expect(pageWidth).toBeLessThanOrEqual(390);
+});
+
+test("onboarding remains usable at tablet width", async ({ page }) => {
+  test.skip(!configured, "Requires a configured Supabase project.");
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/onboarding");
+  await expect(page.getByRole("heading", { name: "Welcome to your study space" })).toBeVisible();
+  const pageWidth = await page.locator("body").evaluate((element) => element.scrollWidth);
+  expect(pageWidth).toBeLessThanOrEqual(768);
+});

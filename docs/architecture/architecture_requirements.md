@@ -605,15 +605,13 @@ This document intentionally does not lock:
 - database schema;
 - class or module names.
 
-Those choices should be proposed later by Codex after it has read the product documentation, architectural requirements, AI and safeguard requirements, and inspected the repository.
+Those choices were intentionally left for the later technical design. The approved planned choices are now recorded in the repository-level `ARCHITECTURE.md` and implementation plan; they must be updated as implementation makes them concrete.
 
-The proposal should then be reviewed before implementation begins.
-
-## 20. Relationship to the Future ARCHITECTURE.md
+## 20. Relationship to ARCHITECTURE.md
 
 This document is a pre-implementation requirements document.
 
-The future repository-level `ARCHITECTURE.md` serves a different purpose. After Codex proposes the technical design and the repository has a meaningful structure, `ARCHITECTURE.md` should become a concise map of the actual system, including:
+The repository-level `ARCHITECTURE.md` serves a different purpose. Its pre-implementation version records the approved planned architecture and must clearly distinguish that plan from implemented reality. As the repository gains a meaningful structure, it should evolve into a concise map of the actual system, including:
 
 - major repository components;
 - where those components live;
@@ -628,14 +626,18 @@ Architecture Requirements
         |
         | defines what must be true
         v
-Codex Technical Design
+Approved Technical Design
         |
-        | proposes how to satisfy it
+        | records planned architecture
+        v
+Pre-implementation ARCHITECTURE.md
+        |
+        | guides and evolves with implementation
         v
 Implementation
         |
         v
-ARCHITECTURE.md
+Updated ARCHITECTURE.md
         |
         | maps the actual codebase
         v

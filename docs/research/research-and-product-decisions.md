@@ -80,6 +80,12 @@ LeetCode itself and return to Miva Buddy for coaching when they need
 help. Miva Buddy does not recreate the LeetCode editor or pretend to
 observe LeetCode activity that the student has not supplied.
 
+Hands-on reference-product observations are preserved separately in
+[`lilo-companion-testing-evidence.md`](lilo-companion-testing-evidence.md).
+That document records empirical Lilo behavior and model compatibility;
+it is evidence for future decisions, not a Miva Buddy specification or
+approval to adopt every observed feature or provider configuration.
+
 ## 3. Product Areas
 
 ### Learn
@@ -309,26 +315,30 @@ The current repository knowledge is organized around the finalized
 project documents:
 
 ``` text
+AGENTS.md
+ARCHITECTURE.md
 README.md
 
 docs/
 ├── research/
 │   └── research-and-product-decisions.md
 ├── product/
-│   ├── product-spec.md
-│   ├── user-journeys-and-mvp.md
-│   ├── ux-spec.md
-│   └── visual-design-system.md
-└── architecture/
-    ├── architecture-requirements.md
-    └── ai-retrieval-safeguards.md
+│   ├── product_specification.md
+│   ├── user_journeys_and_mvp_scope.md
+│   ├── ux_specifications.md
+│   └── visual_design_system.md
+├── architecture/
+│   ├── architecture_requirements.md
+│   └── ai_retrieval_safeguards.md
+└── plans/
+    ├── mvp-implementation-plan.md
+    └── project-status.md
 ```
 
-`AGENTS.md`, the code-aware `ARCHITECTURE.md`, and implementation
-planning documents should be created only after the technical
-architecture and implementation plan have been reviewed. They should
-point to deeper repository knowledge rather than duplicate the product
-specification.
+`AGENTS.md`, the planned `ARCHITECTURE.md`, and implementation planning
+documents were created after the technical architecture and
+implementation plan were reviewed. They point to deeper repository
+knowledge rather than duplicate the product specification.
 
 ## 9. Working Process
 
@@ -394,7 +404,7 @@ The product research, product specification, user journeys and MVP
 scope, UX specification, architecture requirements, AI / retrieval /
 safeguards, and visual design system have been completed.
 
-The current engineering stage is to review the technical architecture
-proposed by Codex, resolve genuine open decisions, and then produce a
-milestone-based MVP implementation plan before application code is
-created.
+The technical architecture and milestone-based MVP implementation plan
+have been approved. The current engineering stage is the
+pre-implementation documentation gate: make the architecture, plan, and
+operating instructions durable before Milestone 1 begins.
