@@ -100,12 +100,15 @@ test("a student can add notes and PDFs and inspect source-backed concepts", asyn
   test.skip(!process.env.DATABASE_URL, "Requires DATABASE_URL for narrowly scoped test cleanup.");
   test.setTimeout(180_000);
   let courseId: string | undefined;
+  let cleanupCookies: Array<{ name: string; value: string }> = [];
   try {
     await page.goto("/onboarding");
     await page.getByLabel("What are you studying?").selectOption("Computer Science");
     await page.getByLabel("What level are you currently in?").selectOption("200 Level");
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page).toHaveURL(/home/, { timeout: 20_000 });
+    // Preserve the synthetic owner's session before long worker waits can time out and close the context.
+    cleanupCookies = await page.context().cookies();
     await page.getByRole("link", { name: /add course materials/i }).click();
     await expect(page).toHaveURL(/courses$/);
     await page.getByLabel("Course name").fill("Synthetic Data Structures");
@@ -145,6 +148,6 @@ test("a student can add notes and PDFs and inspect source-backed concepts", asyn
     const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, viewport: innerWidth }));
     expect(widths.page).toBeLessThanOrEqual(widths.viewport);
   } finally {
-    await cleanupCourse(courseId, await page.context().cookies());
+    await cleanupCourse(courseId, cleanupCookies);
   }
 });

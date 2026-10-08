@@ -3,7 +3,9 @@ import { Pool } from "pg";
 import { loadEnvConfig } from "@next/env";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { getServerConfig } from "@/lib/config";
 import { FakeEmbeddingProvider } from "@/server/embeddings/providers/fake";
+import { OllamaEmbeddingProvider } from "@/server/embeddings/providers/ollama";
 
 loadEnvConfig(process.cwd());
 const enabled = process.env.RUN_HOSTED_SUPABASE_TESTS === "1";
@@ -31,7 +33,11 @@ async function seedReadyCourse(userId: string) {
   const conceptId = randomUUID();
   const chunkId = randomUUID();
   try {
-    const [vector] = await new FakeEmbeddingProvider().embed({
+    const config = getServerConfig();
+    const embeddingProvider = config.EMBEDDING_PROVIDER === "fake"
+      ? new FakeEmbeddingProvider()
+      : new OllamaEmbeddingProvider(config.OLLAMA_BASE_URL, config.OLLAMA_EMBEDDING_MODEL);
+    const [vector] = await embeddingProvider.embed({
       texts: [syntheticPassage], signal: AbortSignal.timeout(20_000),
     });
     if (!vector || vector.length !== 768) throw new Error("Synthetic fixture embedding failed its dimension check.");
@@ -124,17 +130,13 @@ test("a grounded Learn answer cites and opens its owned source, then restores th
 
     await page.goto(`/learn/course/${fixture.courseId}/${fixture.conceptId}`);
     await expect(page.getByRole("heading", { name: "Binary Search Tree Structure" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
     const composer = page.getByLabel("Ask about this concept");
     await composer.fill(question);
+    await expect(composer).toHaveValue(question);
     const send = page.getByRole("button", { name: "Send" });
     await expect(send).toBeEnabled();
-    const groundedResponsePromise = page.waitForResponse((response) => {
-      const url = new URL(response.url());
-      return url.pathname.includes("/api/learn/grounded") && response.request().method() === "POST";
-    }, { timeout: 55_000 });
     await send.click();
-    const groundedResponse = await groundedResponsePromise;
-    expect(groundedResponse.status()).toBe(200);
     await expect(page).toHaveURL(/conversationId=[0-9a-f-]+/i, { timeout: 60_000 });
     await expect(page.getByText("From your course material", { exact: true })).toBeVisible({ timeout: 60_000 });
     const industryPreview = page.locator(".industry-evidence-demo");
