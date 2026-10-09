@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { LearnVoiceInput } from "@/components/learn-voice-input";
 
 type LearnComposerProps = {
   conversationId?: string;
@@ -85,6 +86,7 @@ export function LearnComposer({ conversationId, suggestions = [] }: LearnCompose
           minLength={2}
           disabled={pending}
         />
+        <LearnVoiceInput value={message} disabled={pending} onChange={setMessage} />
         <div className="learn-composer-footer">
           <span>Up to 2,000 characters</span>
           <button className="button button-primary" type="submit" disabled={pending || message.trim().length < 2}>

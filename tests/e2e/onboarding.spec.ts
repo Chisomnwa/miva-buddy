@@ -68,6 +68,20 @@ test("profile submission creates a browser identity, persists, and remains isola
   test.skip(!configured, "Requires a configured Supabase project.");
   test.skip(!runHostedSupabaseTests, "Set RUN_HOSTED_SUPABASE_TESTS=1 to run hosted Auth integration checks; anonymous test users count against Supabase Auth rate limits.");
   test.skip(testInfo.project.name !== "chromium", "Run hosted Auth integration once to avoid creating duplicate anonymous users.");
+  await page.addInitScript(`
+    (() => {
+      class MockSpeechRecognition {
+        constructor() { window.__mockSpeechRecognition = this; }
+        start() { this.onstart?.(); }
+        stop() {
+          this.onresult?.({ results: [{ isFinal: true, 0: { transcript: "Add one spoken follow-up." } }] });
+          this.onend?.();
+        }
+        abort() { window.__mockSpeechAbortCount = (window.__mockSpeechAbortCount || 0) + 1; }
+      }
+      window.SpeechRecognition = MockSpeechRecognition;
+    })();
+  `);
   await page.goto("/onboarding");
   await page.getByLabel("What are you studying?").selectOption("Computer Science");
   await page.getByLabel("What level are you currently in?").selectOption("200 Level");
@@ -112,6 +126,16 @@ test("profile submission creates a browser identity, persists, and remains isola
   await expect(page.getByText("General explanation", { exact: true })).toBeVisible();
   await expect(page.getByText(/No course material is attached/)).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByLabel("Ask a question").fill("Explain binary trees with a small example.");
+  expect(await page.evaluate("typeof window.SpeechRecognition")).toBe("function");
+  await expect(page.getByRole("button", { name: "Start voice input" })).toBeEnabled();
+  await expect(page.getByText(/may use your browser vendor’s speech service/)).toBeVisible();
+  await page.getByRole("button", { name: "Start voice input" }).click();
+  await expect(page.getByRole("button", { name: "Stop voice input" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Stop voice input" }).click();
+  await expect(page.getByLabel("Ask a question")).toHaveValue("Explain binary trees with a small example. Add one spoken follow-up.");
+  await expect(page.getByText("Transcription added. Review or edit it before sending.")).toBeVisible();
+  await expect(page).toHaveURL(/learn$/);
   await page.getByLabel("Ask a question").fill("Explain binary trees with a small example.");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page).toHaveURL(/\/learn\/[0-9a-f-]+$/i, { timeout: 20_000 });
@@ -216,6 +240,22 @@ test("profile submission creates a browser identity, persists, and remains isola
   await expect(otherStudent).toHaveURL(/onboarding/);
   await expect(otherStudent.getByLabel("What level are you currently in?")).toHaveValue("100 Level");
   await separateBrowser.close();
+
+  await page.locator("a.nav-link[href='/learn']:visible").first().click();
+  await expect(page).toHaveURL(/learn$/);
+  await page.getByRole("button", { name: "Start voice input" }).click();
+  await page.evaluate("window.__mockSpeechRecognition.onerror({ error: 'not-allowed' })");
+  await expect(page.getByRole("status")).toContainText("Microphone access was denied");
+  await page.getByRole("button", { name: "Start voice input" }).click();
+  await page.locator("a.nav-link[href='/home']:visible").first().click();
+  await expect.poll(() => page.evaluate("window.__mockSpeechAbortCount || 0")).toBe(1);
+  await page.evaluate("delete window.SpeechRecognition; delete window.webkitSpeechRecognition");
+  await page.goto("/learn");
+  await expect(page.getByRole("button", { name: "Voice input unavailable" })).toBeDisabled();
+  await expect(page.getByRole("status")).toContainText("not supported by this browser");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
 test("onboarding remains usable on a narrow viewport", async ({ page }) => {

@@ -210,6 +210,8 @@ Concept + bounded conversation context
 
 The current Learn route implements this flow with an explicit general-explanation label, bounded recent context, owned conversation persistence, and replaceable provider adapters. Hosted migration, persistence/ownership, live synthetic model evaluations, accessibility, and mobile long-content/code-block/composer checks have passed. Direct learning has no course-grounding sources or citations and does not trigger contextual industry evidence under the approved MVP behavior.
 
+The general Learn composer also supports optional browser-native speech-to-text through `src/components/learn-voice-input.tsx`. The browser API is checked safely on the client after an explicit student action, which also starts microphone/speech processing. Final recognized text is appended to the editable composer draft and uses the existing send flow; it is never submitted automatically. The app does not capture or persist raw audio. Depending on the browser, speech recognition may use a browser-vendor service. This control is not part of the separate course-grounded composer and does not alter interview intent recognition, retrieval, or persistence.
+
 The separate Grounded Learn route implements the course/material/concept context flow. It persists response segments and provenance IDs; citation labels and passage text are resolved from owned rows, not model prose. Material-specific questions with no cited support receive a distinct no-support state, and retrieval failure is separately retryable. The lexical-overlap validator is only a negative filter and is not a proof of semantic entailment.
 
 ### Course-material preparation (Milestone 3 complete)
