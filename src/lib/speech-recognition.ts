@@ -39,8 +39,9 @@ export function appendTranscript(existing: string, transcript: string): string {
 export function speechRecognitionErrorMessage(code: string): string {
   switch (code) {
     case "not-allowed":
+      return "The browser or system blocked microphone access. In Chrome, allow the site to use your microphone and check macOS System Settings → Privacy & Security → Microphone, then try again. You can still type.";
     case "service-not-allowed":
-      return "Microphone access was denied. Allow microphone access in your browser, or keep typing.";
+      return "The browser speech-recognition service did not allow voice input. Check browser support or settings, then try again. You can still type.";
     case "audio-capture":
       return "No usable microphone was found. Check your microphone, or keep typing.";
     case "no-speech":

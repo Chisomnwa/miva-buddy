@@ -23,7 +23,9 @@ describe("browser speech recognition helpers", () => {
   });
 
   it("maps microphone, permission, service, and generic errors to actionable copy", () => {
-    expect(speechRecognitionErrorMessage("not-allowed")).toContain("access was denied");
+    expect(speechRecognitionErrorMessage("not-allowed")).toContain("blocked microphone access");
+    expect(speechRecognitionErrorMessage("not-allowed")).toContain("Privacy & Security");
+    expect(speechRecognitionErrorMessage("service-not-allowed")).toContain("speech-recognition service");
     expect(speechRecognitionErrorMessage("audio-capture")).toContain("No usable microphone");
     expect(speechRecognitionErrorMessage("no-speech")).toContain("No speech was recognized");
     expect(speechRecognitionErrorMessage("network")).toContain("speech service");
