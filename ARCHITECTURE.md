@@ -2,7 +2,7 @@
 
 ## Status
 
-This document records the approved architecture and distinguishes implemented capabilities from planned capabilities. M1–M6 are complete. M7 and M8 live-evidence acceptance remain blocked. The M8 development-only synthetic preview is implemented. M9 integration and hardening are in progress; deployment/provider configuration and the intermittent hosted grounded-Learn E2E still require resolution.
+This document records the approved architecture and distinguishes implemented capabilities from planned capabilities. M1–M6 are complete. M7 is in verification for the user-approved, development-only Remote OK metadata pilot; excerpts, caching, and production use remain out of scope. M8's excerpt-backed live-evidence acceptance remains blocked. The synthetic preview is development-only and remains clearly labeled. M9 integration and hardening are in progress.
 
 As milestones are implemented, this document must evolve from a plan into a concise map of the actual codebase. Planned and implemented details must remain clearly distinguishable.
 
@@ -231,22 +231,23 @@ Problem metadata + student-supplied attempt/request
 
 The application does not claim to observe LeetCode editor state, runs, verdicts, time spent, or completion. Completion is student-confirmed.
 
-### Contextual job evidence (M7 blocked; M8 development preview in progress)
+### Contextual job evidence (M7 metadata integrations in verification; M8 excerpt evidence blocked)
 
 ```text
 Concrete skill in grounded course material
   -> verify source occurrence
-  -> approved provider search
-  -> normalized posting snapshot
-  -> exact skill/approved-alias validation
-  -> evidence found | no credible evidence | retrieval failure
-  -> evidence card from stored data
-  -> optional AI explanation
+  -> permission check before provider call
+       | not approved: SourceNotApproved; no request
+       v approved
+  -> provider search (Remote OK development pilot and opt-in Himalayas metadata path are separate)
+  -> normalize only the fields permitted for that source
+  -> linked metadata card labelled related discovery, not description evidence
+     | no evidence | retrieval failure | source not approved | rate limit
 ```
 
 Nigerian and global postings are both eligible. Geography and career interests may rank already-valid evidence but cannot establish truth.
 
-Implemented M7 building blocks include the source-neutral contract, pure synthetic-tested normalizers for Remotive, Greenhouse, Ashby, and Lever, direct-term/excerpt validation, freshness evaluation, attribution metadata, and an explicit-permission guard. The server-only Remotive adapter can make a single-term, bounded API query only when retrieval and metadata-display grants are explicit; a separate grant gates excerpts. It disables HTTP caching, persists nothing, and enforces only a process-local quota, so it is not safe as production quota enforcement across instances. No grant is configured, the adapter is not wired into Learn, and no job API call was made during the current implementation turn. Published terms do not clearly authorize the intended third-party metadata/excerpt/cache use. Metadata/link-only references have a distinct `references_only` result and cannot make a skill-evidence claim; they are not rendered as if they were evidence and are not automatically permitted.
+Implemented M7 building blocks include source-neutral contracts, synthetic-tested normalizers for Remotive, Greenhouse, Ashby, and Lever, direct-term/excerpt validation, freshness evaluation, attribution metadata, and fail-closed permission guards. `searchJobEvidence` checks retrieval and requested display permissions before calling a provider; denied use becomes the typed `source_not_approved` result, while provider errors or malformed results become `failed`. The Learn UI distinguishes those outcomes from `no_evidence` and renders excerpt-backed `found` records with their attribution and original links. The server-only Remote OK adapter remains opt-in and development-only through `REMOTEOK_METADATA_PILOT=true`; it returns at most three metadata/tag references and is unchanged by the Himalayas integration. The separate server-only Himalayas adapter is enabled only by `HIMALAYAS_METADATA_ENABLED=true`; it searches one canonical skill found in retrieved course passages and returns up to three fresh metadata-only references with publication/retrieval dates, source attribution, and a direct Himalayas link. It does not inspect or display descriptions/excerpts, tags, or assert employer requirements, and does not cache or persist source data. Both use conservative process-local request caps that are not shared quota enforcement. Himalayas API-specific docs support attributed app display, while generic Terms leave description processing, reuse, and retention unclear; these remain disabled. `references_only` cannot make a description-level skill-evidence claim.
 
 The actual M8 preview path is `src/app/api/learn/grounded/route.ts` → `src/server/job-evidence/demo.ts` → strict `IndustryDemo` contract → `GroundedLearnExperience`/`IndustryEvidenceCard`. It derives one canonical skill only from retrieved course passages, only returns it outside production, never includes a real posting URL, is not a `JobEvidenceItem`, and is never persisted. It is visibly labeled as a synthetic demonstration, not a real job posting. This is an explicitly user-authorized development exception while M7 remains blocked; it must not appear in production or be counted as completed source integration. Details and verification are in `docs/engineering/milestone-7-job-evidence-source-evaluation.md` and `docs/engineering/milestone-8-industry-evidence.md`.
 

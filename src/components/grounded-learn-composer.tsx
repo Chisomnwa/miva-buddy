@@ -10,6 +10,8 @@ type GroundedComposerProps = {
   conversationId?: string;
   suggestions?: string[];
   onIndustryDemonstration?: (value: unknown) => void;
+  onIndustryReferences?: (value: unknown) => void;
+  onHimalayasReferences?: (value: unknown) => void;
 };
 
 function publicError(error: string | undefined) {
@@ -19,7 +21,7 @@ function publicError(error: string | undefined) {
   return "We couldn't send that question. Please try again.";
 }
 
-export function GroundedLearnComposer({ courseId, materialId, conceptId, conversationId, suggestions = [], onIndustryDemonstration }: GroundedComposerProps) {
+export function GroundedLearnComposer({ courseId, materialId, conceptId, conversationId, suggestions = [], onIndustryDemonstration, onIndustryReferences, onHimalayasReferences }: GroundedComposerProps) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
@@ -37,7 +39,7 @@ export function GroundedLearnComposer({ courseId, materialId, conceptId, convers
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ conversationId, courseId, materialId, conceptId, message: question }),
       });
-      const result: { conversationId?: string; error?: string; industryDemonstration?: unknown } = await response.json();
+      const result: { conversationId?: string; error?: string; industryDemonstration?: unknown; industryReferences?: unknown; himalayasReferences?: unknown } = await response.json();
       if (result.conversationId) {
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.set("conversationId", result.conversationId);
@@ -49,6 +51,8 @@ export function GroundedLearnComposer({ courseId, materialId, conceptId, convers
           return;
         }
         onIndustryDemonstration?.(result.industryDemonstration ?? null);
+        onIndustryReferences?.(result.industryReferences ?? null);
+        onHimalayasReferences?.(result.himalayasReferences ?? null);
         setMessage("");
         nextUrl.searchParams.delete("notice");
         router.replace(`${nextUrl.pathname}${nextUrl.search}`);

@@ -8,6 +8,7 @@ export type ListingCandidate = {
   title: string;
   company: string;
   location: string | null;
+  tags?: string[];
   sourceName: string;
   sourceUrl: string;
   attributionLabel: string;

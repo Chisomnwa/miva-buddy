@@ -9,6 +9,8 @@ import { OllamaEmbeddingProvider } from "@/server/embeddings/providers/ollama";
 
 loadEnvConfig(process.cwd());
 const enabled = process.env.RUN_HOSTED_SUPABASE_TESTS === "1";
+const remoteOkPilotEnabled = process.env.REMOTEOK_METADATA_PILOT === "true";
+const himalayasMetadataEnabled = process.env.HIMALAYAS_METADATA_ENABLED === "true";
 const syntheticPassage = "A binary search tree stores values smaller than a node in its left subtree and values larger than a node in its right subtree. This synthetic lecture also names SQL as a query language.";
 const question = "According to my course notes, where are values smaller than a node stored?";
 
@@ -144,6 +146,37 @@ test("a grounded Learn answer cites and opens its owned source, then restores th
     await expect(industryPreview).toContainText("Course text directly mentions SQL");
     await expect(industryPreview).toContainText("Example organization (synthetic)");
     await expect(industryPreview.getByRole("link")).toHaveCount(0);
+    if (himalayasMetadataEnabled) {
+      const listingHeading = page.getByText("HIMALAYAS · RELATED LISTINGS", { exact: true });
+      const searchStatus = page.getByRole("status").filter({ hasText: "Himalayas" });
+      await expect.poll(async () => (await listingHeading.count()) + (await searchStatus.count())).toBeGreaterThan(0);
+      if (await listingHeading.count()) {
+        const evidence = page.locator(".remoteok-evidence").filter({ hasText: "HIMALAYAS · RELATED LISTINGS" });
+        await expect(evidence).toContainText("Descriptions were not checked");
+        const card = evidence.locator(".remoteok-card").first();
+        await expect(card.locator("h3")).not.toBeEmpty();
+        await expect(card.locator(".remoteok-company")).not.toBeEmpty();
+        await expect(card).toContainText("Source: Himalayas");
+        await expect(card).toContainText("Retrieved");
+        await expect(card.getByRole("link", { name: /View listing on Himalayas/ }))
+          .toHaveAttribute("href", /^https:\/\/himalayas\.app\/jobs\//);
+      } else {
+        await expect(searchStatus).toBeVisible();
+      }
+    }
+    if (remoteOkPilotEnabled) {
+      const remoteOk = page.locator(".remoteok-evidence");
+      const remoteOkStatus = page.getByRole("status").filter({ hasText: /Remote OK/ });
+      await expect.poll(async () => (await remoteOk.count()) > 0 || (await remoteOkStatus.count()) > 0).toBe(true);
+      if (await remoteOk.count()) {
+        await expect(remoteOk.getByText("REMOTE OK · METADATA ONLY")).toBeVisible();
+        await expect(remoteOk.getByText("Job descriptions were not checked, so no skill requirement is being claimed.")).toBeVisible();
+        await expect(remoteOk.getByRole("link", { name: /View original listing on Remote OK/ }).first())
+          .toHaveAttribute("href", /^https:\/\/remoteok\.com\/remote-jobs\//);
+      } else {
+        await expect(remoteOkStatus).toBeVisible();
+      }
+    }
     const conversationId = new URL(page.url()).searchParams.get("conversationId");
     if (!conversationId) throw new Error("Grounded conversation did not persist its context.");
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { jobEvidenceItemSchema, jobEvidenceResultSchema } from "@/contracts/job-evidence";
 import { buildEvidenceItem, directlyMentions } from "@/server/job-evidence/matching";
 import { checkEvidenceFreshness } from "@/server/job-evidence/freshness";
@@ -11,6 +11,8 @@ import {
 } from "@/server/job-evidence/normalizers";
 import { mayCacheEvidence, requireEvidencePermission, EvidenceUseNotAuthorizedError, type EvidenceUseGrant } from "@/server/job-evidence/permissions";
 import { jobEvidenceFixtures } from "../fixtures/job-evidence";
+import { searchJobEvidence } from "@/server/job-evidence/search";
+import type { JobEvidenceProvider } from "@/server/job-evidence/provider";
 
 const permittedFixtureGrant: EvidenceUseGrant = {
   retrieve: "permitted",
@@ -48,6 +50,37 @@ describe("source-independent job-evidence contract", () => {
   it("does not collapse no-evidence, provider failure, rate-limit, stale, and removed states", () => {
     const statuses = Object.values(jobEvidenceFixtures).map((fixture) => fixture.status);
     expect(new Set(statuses).size).toBe(statuses.length);
+  });
+
+  it("returns SourceNotApproved without querying when retrieval or the requested reuse is not approved", async () => {
+    const search = vi.fn<JobEvidenceProvider["search"]>().mockResolvedValue(jobEvidenceFixtures.noEvidence);
+    const provider: JobEvidenceProvider = { search };
+    const retrievalDenied = { ...permittedFixtureGrant, retrieve: "unclear" as const };
+    const excerptDenied = { ...permittedFixtureGrant, display_excerpt: "unclear" as const };
+
+    await expect(searchJobEvidence(provider, { terms: ["TypeScript"] }, retrievalDenied, "metadata"))
+      .resolves.toEqual({ status: "source_not_approved" });
+    await expect(searchJobEvidence(provider, { terms: ["TypeScript"] }, excerptDenied, "excerpt"))
+      .resolves.toEqual({ status: "source_not_approved" });
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it("keeps a completed empty search distinct from a retrieval failure", async () => {
+    const provider: JobEvidenceProvider = {
+      search: vi.fn<JobEvidenceProvider["search"]>().mockResolvedValue(jobEvidenceFixtures.noEvidence),
+    };
+    await expect(searchJobEvidence(provider, { terms: ["TypeScript"] }, permittedFixtureGrant, "excerpt"))
+      .resolves.toEqual({ status: "no_evidence" });
+
+    const throwingProvider: JobEvidenceProvider = { search: vi.fn().mockRejectedValue(new Error("private provider detail")) };
+    await expect(searchJobEvidence(throwingProvider, { terms: ["TypeScript"] }, permittedFixtureGrant, "excerpt"))
+      .resolves.toEqual({ status: "failed", retryable: true });
+
+    const malformedProvider = {
+      search: vi.fn().mockResolvedValue({ status: "found", items: [] }),
+    } as unknown as JobEvidenceProvider;
+    await expect(searchJobEvidence(malformedProvider, { terms: ["TypeScript"] }, permittedFixtureGrant, "excerpt"))
+      .resolves.toEqual({ status: "failed", retryable: false });
   });
 
   it("normalizes synthetic records from each supported source shape without network access", () => {

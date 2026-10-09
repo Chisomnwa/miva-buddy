@@ -7,12 +7,19 @@ import type { GenerationMessage } from "@/server/ai/provider";
 import { generateGroundedLearningReply, isMaterialSpecificQuestion, noCourseSupportReply } from "@/server/ai/grounded-learning";
 import { CourseRetrievalUnavailableError, retrieveCourseEvidence } from "@/server/retrieval/course-retrieval";
 import { createIndustryDemonstration } from "@/server/job-evidence/demo";
+import { createRemoteOkJobEvidenceProvider, isRemoteOkMetadataPilotEnabled, remoteOkMetadataGrant } from "@/server/job-evidence/remoteok-provider";
+import { createHimalayasJobEvidenceProvider, isHimalayasMetadataEnabled } from "@/server/job-evidence/himalayas-provider";
+import { searchJobEvidence } from "@/server/job-evidence/search";
+import { searchCourseHimalayasReferences } from "@/server/job-evidence/course-himalayas";
+import { skillsExplicitlyInCourse } from "@/server/job-evidence/skills";
 import { getServerConfig } from "@/lib/config";
 import { recordSafeOperation } from "@/server/observability/safe-telemetry";
 
 const maxRequestBytes = 16_384;
 const maxMessagesPerMinute = 8;
 const generationTimeoutMs = 45_000;
+const remoteOkProvider = createRemoteOkJobEvidenceProvider();
+const himalayasProvider = createHimalayasJobEvidenceProvider();
 
 function json(data: object, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -181,5 +188,19 @@ export async function POST(request: Request) {
   const industryDemonstration = evidence.status === "supporting_evidence_found"
     ? createIndustryDemonstration(evidence.chunks, process.env.NODE_ENV ?? "production")
     : null;
-  return json({ conversationId, industryDemonstration });
+  let industryReferences = null;
+  const terms = evidence.status === "supporting_evidence_found" ? skillsExplicitlyInCourse(evidence.chunks) : [];
+  if (isRemoteOkMetadataPilotEnabled(process.env.NODE_ENV, process.env.REMOTEOK_METADATA_PILOT)
+    && evidence.status === "supporting_evidence_found") {
+    if (terms.length > 0) {
+      industryReferences = await searchJobEvidence(remoteOkProvider, { terms }, remoteOkMetadataGrant, "metadata", signal);
+    }
+  }
+  const himalayasReferences = await searchCourseHimalayasReferences(
+    evidence,
+    isHimalayasMetadataEnabled(process.env.HIMALAYAS_METADATA_ENABLED),
+    himalayasProvider,
+    signal,
+  );
+  return json({ conversationId, industryDemonstration, industryReferences, himalayasReferences });
 }

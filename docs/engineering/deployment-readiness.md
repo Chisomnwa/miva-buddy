@@ -4,7 +4,7 @@
 
 The application builds as a Node.js Next.js server plus a separate PostgreSQL-backed material worker. Development uses hosted Supabase and can use local Ollama. No production host, production Supabase project, or production embedding endpoint has been selected or verified. No deployment was performed.
 
-M7 live-source approval and the live-evidence acceptance criteria in M8 remain blocked release limitations. The synthetic industry preview is development-only, is not persisted or linked to a real source, and is disabled by the server in production. Keep source selection and display permission gates fail-closed.
+The approved Remote OK integration is a development-only metadata-and-direct-link pilot, not a production integration. M8's excerpt-backed acceptance remains blocked; synthetic preview is clearly labeled, not persisted, and disabled by the server in production. Keep excerpts, caching, persistence, and production job retrieval/display disabled unless their specific permissions and operational controls are established.
 
 ## Runtime topology
 
@@ -61,7 +61,7 @@ Do not pass a Supabase service-role key to the browser. The current repository d
 
 The following prevent a fully live public MVP release; no source permission outreach is being requested in this development phase:
 
-1. M7 source approval and M8's real-evidence acceptance remain blocked. Do not switch on real job retrieval, metadata/excerpt display, or caching.
+1. Only Remote OK metadata/direct-link display is approved for the opt-in development pilot. Do not enable its retrieval in production, cache or persist its results, or display description excerpts. M8's excerpt-backed evidence acceptance remains blocked.
 2. A deployment provider and production domain have not been selected. The choice must support a Node.js web server and a separately supervised long-running worker, private environment variables, and outbound PostgreSQL/Ollama connectivity.
 3. A production-capable embedding topology must be chosen. Today the implemented course-processing path uses Ollama; the worker needs a private service endpoint with `nomic-embed-text` loaded, or a separately designed/evaluated hosted adapter.
 4. Production Supabase Auth abuse protection, backups/PITR, provider budgets, monitoring, and retention/deletion operations must be configured and verified.

@@ -136,6 +136,8 @@ export function toMetadataReference(
     title: listing.title,
     company: listing.company,
     location: listing.location,
+    tags: listing.tags ?? [],
+    matchedTags: [],
     sourceName: listing.sourceName,
     sourceUrl: listing.sourceUrl,
     attributionLabel: listing.attributionLabel,

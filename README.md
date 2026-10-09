@@ -30,6 +30,8 @@ Requirements: Node.js 20+, npm, and a configured hosted Supabase development pro
 
 Without the worker, the web app, direct Learn, and Practice run, but new notes/PDFs remain queued or fail safely until a worker is available. Use only synthetic course content with hosted AI services during development and evaluation.
 
+The optional Remote OK metadata-only pilot is development-only and off by default. Set `REMOTEOK_METADATA_PILOT=true` in ignored `.env.local` to enable a low-volume lookup from grounded Learn. It displays only role metadata, source tags, Remote OK attribution, and direct listing links; descriptions are not inspected or shown, responses are not cached or persisted, and production ignores the flag. The request cap is process-local and is not a production-wide quota.
+
 ## Verify
 
 ```sh
@@ -45,7 +47,7 @@ Hosted Supabase browser tests are opt-in with `RUN_HOSTED_SUPABASE_TESTS=1 npm r
 
 ## Current release limitations
 
-M7 live-source approval and M8 live-evidence acceptance remain blocked. The development-only industry preview is synthetic, unmistakably labeled, not persisted, and disabled in production. Do not present it as a real job posting. Public release also requires an approved deployment provider, production Supabase and secret configuration, and a production-capable embedding service/worker topology. See [project status](docs/plans/project-status.md) and [deployment readiness](docs/engineering/deployment-readiness.md).
+The Remote OK metadata-and-link pilot is approved for development, but M8's excerpt-backed skill-evidence acceptance remains incomplete. The synthetic industry preview is synthetic, unmistakably labeled, not persisted, and disabled in production. Do not present it as a real job posting or as skill evidence. Public release also requires a production-wide upstream quota, approved deployment provider, production Supabase and secret configuration, and a production-capable embedding service/worker topology. See [project status](docs/plans/project-status.md) and [deployment readiness](docs/engineering/deployment-readiness.md).
 
 ## Project knowledge
 

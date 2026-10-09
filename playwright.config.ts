@@ -17,5 +17,5 @@ export default defineConfig({
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
-    : { command: "npm run dev -- --hostname 127.0.0.1", url: "http://127.0.0.1:3000", reuseExistingServer: !process.env.CI, timeout: 120_000, env: { AI_PROVIDER: "fake", EMBEDDING_PROVIDER: "fake" } },
+    : { command: "npm run dev -- --hostname 127.0.0.1", url: "http://127.0.0.1:3000", reuseExistingServer: !process.env.CI, timeout: 120_000, env: { AI_PROVIDER: "fake", EMBEDDING_PROVIDER: "fake", REMOTEOK_METADATA_PILOT: process.env.REMOTEOK_METADATA_PILOT ?? "false" } },
 });
