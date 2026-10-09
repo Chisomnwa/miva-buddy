@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { getRecentLearnConversations } from "@/lib/learning";
 import { RecentLearning } from "@/components/recent-learning";
+import { PracticeResumeSection } from "@/components/practice-resume-section";
 import { getPracticeProblem, getPracticeTopic } from "@/server/practice/catalog";
 import { displayCourseTitle } from "@/lib/course-title-display";
 
@@ -11,15 +12,28 @@ export default async function HomePage() {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile, error: profileError } = user ? await getProfile(user.id) : { data: null, error: null };
   if (profileError) throw new Error("profile_lookup_failed");
-  const recent = user ? await getRecentLearnConversations(user.id, 3) : [];
+  const recent = user ? await getRecentLearnConversations(user.id, 6) : [];
   const { data: courses, error: coursesError } = user ? await supabase.from("courses")
     .select("id,title,course_code").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(3)
     : { data: [], error: null };
   if (coursesError) throw new Error("home_courses_lookup_failed");
   const { data: practiceSessions, error: practiceError } = user ? await supabase.from("practice_sessions")
     .select("id,problem_slug,topic_id,mode,updated_at").eq("user_id", user.id).eq("status", "in_progress")
-    .order("updated_at", { ascending: false }).limit(3) : { data: [], error: null };
+    .order("updated_at", { ascending: false }).limit(10) : { data: [], error: null };
   if (practiceError) throw new Error("practice_resume_lookup_failed");
+  const resumablePracticeSessions = (practiceSessions ?? []).flatMap((session) => {
+    const problem = getPracticeProblem(session.problem_slug);
+    if (!problem) return [];
+    const topic = getPracticeTopic(session.topic_id);
+    const mode = session.mode === "coach" ? "Coach" : session.mode === "tutor" ? "Tutor" : "Hands Off";
+    return [{
+      id: session.id,
+      title: problem.title,
+      difficulty: problem.difficulty,
+      mode: session.mode,
+      metadata: `${topic?.label ?? "Practice"} · ${mode}`,
+    }];
+  });
   const firstName = profile?.programme ? (user?.user_metadata?.name as string | undefined)?.split(" ")[0] : undefined;
 
   return (
@@ -59,15 +73,13 @@ export default async function HomePage() {
           <span>{displayCourseTitle(course.title)}<small className="practice-list-meta">{course.course_code || "Course materials"}</small></span><span aria-hidden="true">→</span>
         </Link></li>)}</ul>
       </section>}
-      {practiceSessions && practiceSessions.length > 0 && <section className="recent-learning" aria-labelledby="recent-practice-heading">
-        <div className="section-heading-row"><h2 id="recent-practice-heading">Continue Practice</h2><Link className="text-link" href="/practice">All topics</Link></div>
-        <ul className="recent-learning-list">{practiceSessions.map((session) => {
-          const problem = getPracticeProblem(session.problem_slug);
-          const topic = getPracticeTopic(session.topic_id);
-          return problem ? <li key={session.id}><Link href={`/practice/session/${session.id}`}><span>{problem.title}<small className="practice-list-meta">{topic?.label ?? "Practice"} · {session.mode === "coach" ? "Coach" : session.mode === "tutor" ? "Tutor" : "Hands Off"}</small></span><span aria-hidden="true">→</span></Link></li> : null;
-        })}</ul>
-      </section>}
-      <RecentLearning conversations={recent} />
+      <PracticeResumeSection
+        items={resumablePracticeSessions}
+        heading="Continue Practice"
+        allTopicsHref="/practice"
+        className="recent-learning"
+      />
+      <RecentLearning conversations={recent} collapsible />
       <p className="home-footnote">{profile?.programme ? `${profile.programme} · ${profile.level}` : "Your learning progress will appear here as you go."}</p>
     </>
   );
