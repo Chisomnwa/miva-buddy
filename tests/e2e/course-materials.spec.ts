@@ -109,7 +109,7 @@ test("a student can add notes and PDFs and inspect source-backed concepts", asyn
     await expect(page).toHaveURL(/home/, { timeout: 20_000 });
     // Preserve the synthetic owner's session before long worker waits can time out and close the context.
     cleanupCookies = await page.context().cookies();
-    await page.getByRole("link", { name: /add course materials/i }).click();
+    await page.getByRole("link", { name: "Open Courses" }).click();
     await expect(page).toHaveURL(/courses$/);
     await page.getByLabel("Course name").fill("Synthetic Data Structures");
     await page.getByLabel("Course code").fill("TEST-203");
