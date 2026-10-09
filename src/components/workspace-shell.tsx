@@ -7,7 +7,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
       <AppNavigation />
       <main className="workspace-main">
         <div className="workspace-topline">
-          <span className="workspace-session">Saved in this browser</span>
+          <span className="workspace-session">Same-browser access · privately stored online</span>
         </div>
         <div className="page-container">{children}</div>
       </main>

@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BrandLockup } from "@/components/brand-lockup";
 
 const primaryLinks = [
   { href: "/home", label: "Home", icon: "⌂" },
   { href: "/learn", label: "Learn", icon: "↗" },
+  { href: "/courses", label: "Courses", icon: "▤" },
   { href: "/practice", label: "Practice", icon: "⌘" },
 ];
 
@@ -26,18 +28,12 @@ export function AppNavigation() {
   return (
     <>
       <aside className="sidebar" aria-label="Primary navigation">
-        <Link className="brand-lockup" href="/home">
-          <span className="brand-mark" aria-hidden="true">m</span>
-          <span>Miva Buddy</span>
-        </Link>
+        <BrandLockup linked />
         <nav className="side-links"><NavItems /></nav>
         <Link className="profile-link" href="/profile">Profile &amp; settings</Link>
       </aside>
       <header className="mobile-header">
-        <Link className="brand-lockup" href="/home">
-          <span className="brand-mark" aria-hidden="true">m</span>
-          <span>Miva Buddy</span>
-        </Link>
+        <BrandLockup linked />
         <Link className="mobile-profile" href="/profile" aria-label="Profile and settings">Profile</Link>
       </header>
       <nav className="bottom-nav" aria-label="Primary navigation"><NavItems /></nav>

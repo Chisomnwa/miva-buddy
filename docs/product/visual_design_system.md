@@ -254,6 +254,8 @@ The learning composer can be slightly larger than a standard input without becom
 
 ## 13. Navigation
 
+V1 update: include Courses as a fourth primary item in the desktop sidebar and mobile bottom navigation. The three-item diagrams below illustrate the earlier baseline; spacing and touch targets must accommodate all four items without horizontal overflow. The original supplied Miva symbol is used with the Miva Buddy name, while the interface remains a student-focused project rather than an official university service.
+
 ### Desktop
 
 Use a deep navy sidebar with stable primary navigation.

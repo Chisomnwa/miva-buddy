@@ -62,7 +62,8 @@ export function LearnComposer({ conversationId, suggestions = [] }: LearnCompose
   return (
     <div className="learn-composer-wrap">
       {suggestions.length > 0 && (
-        <div className="learn-suggestions" aria-label="Suggested follow-up questions">
+        <div className="learn-suggestions" aria-label="Suggested questions">
+          <p className="suggestions-label">Try a question</p>
           {suggestions.map((suggestion) => (
             <button key={suggestion} className="suggestion-chip" type="button" onClick={() => setMessage(suggestion)}>
               {suggestion}

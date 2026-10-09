@@ -1,5 +1,7 @@
 import { groundedResponseSegmentSchema } from "@/contracts/grounded-learning";
 import { GroundedSourceInspector } from "./grounded-source-inspector";
+import { MessageContent } from "@/components/message-content";
+import { CopyResponseButton } from "@/components/copy-response-button";
 
 export type GroundedStoredMessage = {
   id: string;
@@ -19,15 +21,17 @@ export function GroundedLearnConversation({ messages }: { messages: GroundedStor
         : [];
       return <article className={`learn-message ${message.role === "assistant" ? "learn-message-assistant" : "learn-message-student"}`} key={message.id}>
         <p className="eyebrow">{message.role === "assistant" ? "MIVA BUDDY" : "YOU"}</p>
-        {message.role === "user" ? <p className="learn-message-content">{message.content}</p>
+        {message.role === "user" ? <div className="learn-message-content"><MessageContent content={message.content} /></div>
           : segments.length ? <div className="grounded-segments">{segments.map((segment, index) => <section className={`grounded-segment grounded-segment-${segment.kind}`} key={`${message.id}-${index}`}>
             <p className="grounding-label">{segment.kind === "grounded" ? "From your course material" : segment.kind === "no_support" ? "Not found in your course material" : "Additional explanation"}</p>
-            <p className="learn-message-content">{segment.content}</p>
+            <div className="learn-message-content"><MessageContent content={segment.content} /></div>
             {segment.kind === "grounded" && <div className="grounded-citations" aria-label="Supporting sources">
+              <span className="source-group-label">Supporting sources</span>
               {segment.citationIds.map((sourceId) => <GroundedSourceInspector key={sourceId} sourceId={sourceId} label="Inspect source" />)}
             </div>}
           </section>)}</div>
-          : <section className="grounded-segment grounded-segment-additional"><p className="grounding-label">Additional explanation</p><p className="learn-message-content">{message.content}</p></section>}
+          : <section className="grounded-segment grounded-segment-additional"><p className="grounding-label">Additional explanation</p><div className="learn-message-content"><MessageContent content={message.content} /></div></section>}
+        {message.role === "assistant" && <div className="message-actions"><CopyResponseButton content={message.content} /></div>}
       </article>;
     })}
   </div>;

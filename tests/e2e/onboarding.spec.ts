@@ -17,9 +17,50 @@ test("first visit opens onboarding without an authentication ceremony", async ({
   await page.goto("/");
   await expect(page).toHaveURL(/onboarding/);
   await expect(page.getByRole("heading", { name: "Welcome to your study space" })).toBeVisible();
+  await expect(page.locator(".onboarding-card .brand-symbol")).toBeVisible();
   await expect(page.getByLabel(/email|password|sign in|sign up/i)).toHaveCount(0);
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
+});
+
+test("onboarding photo is local and the form remains readable on desktop and mobile", async ({ page, request }) => {
+  test.skip(!configured, "Requires a configured Supabase project.");
+  const image = await request.get("/images/onboarding-study.webp");
+  expect(image.ok()).toBe(true);
+  expect(image.headers()["content-type"]).toContain("image/webp");
+
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/onboarding");
+    await expect(page.getByRole("heading", { name: "Welcome to your study space" })).toBeVisible();
+    await expect(page.getByLabel("What are you studying?")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
+    const background = await page.locator(".onboarding-screen").evaluate((element) => getComputedStyle(element).backgroundImage);
+    expect(background).toContain("/images/onboarding-study.webp");
+    expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  }
+});
+
+test("onboarding falls back to a readable surface if the photograph cannot load", async ({ page }) => {
+  test.skip(!configured, "Requires a configured Supabase project.");
+  await page.route("**/images/onboarding-study.webp", (route) => route.abort());
+  await page.goto("/onboarding");
+  await expect(page.getByRole("heading", { name: "Welcome to your study space" })).toBeVisible();
+  await expect(page.getByLabel("What are you studying?")).toBeVisible();
+  const color = await page.locator(".onboarding-screen").evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(color).not.toBe("rgba(0, 0, 0, 0)");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("the favicon uses the supplied Miva symbol asset", async ({ request }) => {
+  const asset = await request.get("/brand/miva-logo.png");
+  expect(asset.ok()).toBe(true);
+  const icon = await request.get("/icon");
+  expect(icon.ok()).toBe(true);
+  expect(icon.headers()["content-type"]).toContain("image/png");
+  const bytes = await icon.body();
+  expect(bytes.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
 });
 
 test("profile submission creates a browser identity, persists, and remains isolated", async ({ page, browser }, testInfo) => {
@@ -48,6 +89,7 @@ test("profile submission creates a browser identity, persists, and remains isola
 
   await expect(page.locator("a.nav-link[href='/home']:visible")).toHaveAttribute("aria-current", "page");
   await expect(page.locator("a.nav-link[href='/learn']:visible")).toBeVisible();
+  await expect(page.locator("a.nav-link[href='/courses']:visible")).toBeVisible();
   await expect(page.locator("a.nav-link[href='/practice']:visible")).toBeVisible();
   await expect(page.locator("a[href='/profile']:visible").first()).toBeVisible();
 
@@ -61,9 +103,8 @@ test("profile submission creates a browser identity, persists, and remains isola
 
   await page.getByLabel("What are you studying?").selectOption("Software Engineering");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page).toHaveURL(/home/, { timeout: 20_000 });
-  await page.locator("a[href='/profile']:visible").first().click();
   await expect(page).toHaveURL(/profile/);
+  await expect(page.getByRole("status")).toContainText("Profile changes saved.");
   await expect(page.getByLabel("What are you studying?")).toHaveValue("Software Engineering");
 
   await page.locator("a.nav-link[href='/learn']:visible").first().click();
@@ -76,6 +117,7 @@ test("profile submission creates a browser identity, persists, and remains isola
   await expect(page).toHaveURL(/\/learn\/[0-9a-f-]+$/i, { timeout: 20_000 });
   await expect(page.locator(".learn-message-student .learn-message-content").filter({ hasText: /^Explain binary trees with a small example\.$/ })).toBeVisible();
   await expect(page.getByText(/Let’s unpack Explain binary trees/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy response" })).toBeVisible();
   const conversationUrl = page.url();
   await page.reload();
   await expect(page).toHaveURL(conversationUrl);

@@ -4,6 +4,7 @@ import { MaterialForms } from "@/components/course-forms";
 import { RetryMaterialForm } from "@/components/course-forms";
 import { CourseProcessingRefresh } from "@/components/course-processing-refresh";
 import { createClient } from "@/lib/supabase/server";
+import { displayCourseTitle } from "@/lib/course-title-display";
 
 const failureMessages: Record<string, string> = {
   no_extractable_text: "No readable text was found. Try a text-based PDF or paste the notes instead.",
@@ -58,9 +59,9 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
 
   return <div className="simple-page">
     <Link className="back-link" href="/courses">← All courses</Link>
-    <p className="eyebrow">{course.course_code || "COURSE"}</p><h1>{course.title}</h1>
+    <p className="eyebrow">{course.course_code || "COURSE"}</p><h1>{displayCourseTitle(course.title)}</h1>
     <p className="intro-copy">Add a PDF or paste your notes. Concepts are identified from the material and linked to their source pages.</p>
-    {materials?.length ? <section className="materials-list" aria-label="Course materials"><h2>Materials and concepts</h2>
+    {materials?.length ? <section className="materials-list" aria-label="Course materials"><div className="section-heading-row"><div><p className="eyebrow">READY TO LEARN FROM</p><h2>Materials and concepts</h2></div><span className="section-count">{materials.length} {materials.length === 1 ? "material" : "materials"}</span></div>
       {materials.map((material) => <article className="material-card" key={material.id}>
         <div className="material-heading"><div><p className="eyebrow">{material.kind === "pdf" ? "PDF" : "PASTED NOTES"}</p><h3>{material.title}</h3></div><span className={`status-pill status-${material.status}`}>{statusLabel(material.status)}</span></div>
         {material.status === "failed" && <><p className="material-error" role="status">{failureMessages[material.failure_code ?? ""] ?? "We couldn't process this material. Your original material is saved; you can add it again or paste its text."}</p>
@@ -74,6 +75,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
       </article>)}
     </section> : <p className="empty-state">No materials yet. Add a PDF or paste your notes below.</p>}
     <CourseProcessingRefresh pending={hasPendingMaterials} />
+    <div className="section-heading-row add-material-heading"><div><p className="eyebrow">GROW THIS COURSE</p><h2>Add material</h2></div></div>
     <MaterialForms courseId={course.id} />
   </div>;
 }

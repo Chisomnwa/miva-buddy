@@ -2,6 +2,7 @@ import { LearnComposer } from "@/components/learn-composer";
 import { RecentLearning } from "@/components/recent-learning";
 import { createClient } from "@/lib/supabase/server";
 import { getRecentLearnConversations } from "@/lib/learning";
+import Link from "next/link";
 
 export default async function LearnPage() {
   const supabase = await createClient();
@@ -12,7 +13,11 @@ export default async function LearnPage() {
     <section className="learn-page">
       <p className="eyebrow">LEARN</p>
       <h1>Understand something</h1>
-      <p className="intro-copy">Ask about a concept, build an intuition, and follow up when you need more.</p>
+      <p className="intro-copy">Start with a question, or choose a concept from your course material for answers with source references.</p>
+      <div className="learn-route-card">
+        <div><p className="eyebrow">YOUR COURSE MATERIAL</p><h2>Learn with your notes</h2><p>Choose a ready concept in Courses to ask questions grounded in an uploaded PDF or pasted notes.</p></div>
+        <Link className="button button-secondary" href="/courses">Browse Courses <span aria-hidden="true">→</span></Link>
+      </div>
       <div className="general-learning-label">
         <span className="general-learning-dot" aria-hidden="true" />
         <div>
@@ -23,7 +28,7 @@ export default async function LearnPage() {
       <div className="learning-disclosure" role="note">
         Your question and a limited amount of recent conversation may be sent to the configured AI provider to generate a reply. Avoid sharing sensitive personal information.
       </div>
-      <LearnComposer />
+      <LearnComposer suggestions={["Explain recursion with a small example", "How do hash tables work?", "Quiz me on binary search"]} />
       <RecentLearning conversations={recent} />
     </section>
   );

@@ -102,6 +102,8 @@ to use the product.
 
 ## 3. Information Architecture
 
+V1 interface refinement update: Courses is now a first-class primary navigation item on desktop and mobile. The earlier three-item navigation diagrams and the navigation bullet in Section 30 document the pre-refinement baseline; use Home, Learn, Courses, Practice, with Profile/Settings separate. This change does not add an Industry destination or change the course/learning flows. See `docs/plans/v1-interface-refinement-plan.md`.
+
 The primary navigation is deliberately small:
 
 ``` text
@@ -1146,7 +1148,7 @@ collection of disconnected AI tools.
 ## 30. UX Decisions Locked by This Specification
 
 -   Web-first, responsive experience.
--   Primary navigation: Home, Learn, Practice, Profile/Settings.
+-   Primary navigation: Home, Learn, Courses, Practice, with Profile/Settings separate (V1 refinement).
 -   No standalone Industry navigation or Industry journey.
 -   Industry evidence appears inside Learn only when supported by real
     job-posting evidence.

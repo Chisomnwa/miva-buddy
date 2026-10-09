@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getPublicSupabaseConfig } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
+import { BrandLockup } from "@/components/brand-lockup";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function IndexPage() {
     return (
       <main className="setup-screen">
         <div className="setup-card">
-          <span className="brand-mark" aria-hidden="true">m</span>
+          <BrandLockup />
           <p className="eyebrow">MIVA BUDDY · SETUP</p>
           <h1>Connect your Supabase project</h1>
           <p className="intro-copy">Add the Supabase project URL (origin only, with no REST/Auth path) and publishable key to enable onboarding and saved profiles.</p>

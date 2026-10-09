@@ -43,5 +43,5 @@ export async function saveProfileAction(
   });
   if (error) return { error: "We couldn't save your profile. Please try again." };
 
-  redirect("/home");
+  redirect(readString(formData, "saveContext") === "profile" ? "/profile?saved=1" : "/home");
 }

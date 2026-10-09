@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { LearnStoredMessage } from "@/contracts/learning";
+import { CopyResponseButton } from "@/components/copy-response-button";
 
 function renderMessageContent(content: string) {
   const blocks: ReactNode[] = [];
@@ -32,6 +33,7 @@ export function LearnConversation({ messages }: { messages: LearnStoredMessage[]
         <article className={`learn-message ${message.role === "assistant" ? "learn-message-assistant" : "learn-message-student"}`} key={message.id}>
           <p className="eyebrow">{message.role === "assistant" ? "MIVA BUDDY" : "YOU"}</p>
           <div className="learn-message-content">{renderMessageContent(message.content)}</div>
+          {message.role === "assistant" && <div className="message-actions"><CopyResponseButton content={message.content} /></div>}
         </article>
       ))}
     </div>

@@ -11,16 +11,20 @@ export function ProfileForm({
   level = "",
   careerInterests = [],
   submitLabel = "Continue",
+  saveContext = "onboarding",
 }: {
   programme?: string;
   level?: string;
   careerInterests?: string[];
   submitLabel?: string;
+  saveContext?: "onboarding" | "profile";
 }) {
   const [state, formAction, pending] = useActionState(saveProfileAction, initialState);
 
   return (
     <form action={formAction} className="form-stack">
+      <input type="hidden" name="saveContext" value={saveContext} />
+      {saveContext === "profile" && <p className="form-intro">Your study area, level, and interests help tailor examples and keep relevant learning paths easy to find.</p>}
       <label className="field">
         <span>What are you studying?</span>
         <select name="programme" defaultValue={programme || "Computer Science"} required>
