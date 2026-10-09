@@ -1,6 +1,6 @@
 # Practice catalog curation
 
-Milestone 5 uses a small, reviewable metadata-only catalog. Each record contains only the LeetCode problem number, slug, title, difficulty, canonical URL, official topic tags, and Miva Buddy topic mapping. It deliberately excludes statements, examples, hints, solutions, test cases, company lists, and scraped page content. The source remains LeetCode's official problem page; links open the original problem.
+Milestone 5 began with a small, reviewable metadata-only catalog. Phase 2 expands it into a 14-pattern learning library. Each record contains only the LeetCode problem number, slug, title, difficulty, canonical URL, a relevant subset of official topic tags, and Miva Buddy's instructional pattern mapping. It deliberately excludes statements, examples, hints, solutions, test cases, company lists, and scraped page content. Links open the original LeetCode problem.
 
 ## Initial reviewed set
 
@@ -21,4 +21,29 @@ Verified against the official LeetCode pages on 2026-10-07. The topic grouping i
 | 226 | Invert Binary Tree | Easy | Trees | https://leetcode.com/problems/invert-binary-tree/ |
 | 200 | Number of Islands | Medium | Graphs & grids | https://leetcode.com/problems/number-of-islands/ |
 
-The catalog is maintained in `src/server/practice/catalog.ts` and checked by `tests/unit/practice-catalog.test.ts`. The strict metadata schema rejects extra fields, and the URL check permits only canonical HTTPS `leetcode.com/problems/{slug}/` links. Re-verify title, difficulty, tags, and continued availability before adding or materially changing entries. This is a curated starter set, not a claim of comprehensive curriculum coverage.
+## Phase 2 pattern library
+
+The current catalog contains **107 unique, free-to-open problems**. Each belongs to one primary teaching pattern, so no problem appears twice. The order below and each pattern's order in `src/server/practice/catalog.ts` are deliberate learning paths; displayed difficulty and tags help students choose a starting point. Existing problem IDs, slugs, canonical URLs, and persisted session topic IDs remain compatible.
+
+| Pattern | Problems |
+|---|---:|
+| Arrays & Hashing | 15 |
+| Two Pointers | 7 |
+| Sliding Window | 7 |
+| Stack | 7 |
+| Binary Search | 7 |
+| Linked Lists | 7 |
+| Trees & Binary Search Trees | 9 |
+| Backtracking | 6 |
+| Heaps & Priority Queues | 6 |
+| Graphs (DFS & BFS) | 9 |
+| Dynamic Programming | 9 |
+| Greedy Algorithms | 6 |
+| Intervals | 6 |
+| Tries | 6 |
+
+Prefix Sum is treated as a technique used within array/hash problems, not a standalone pattern. Its six catalog entries remain intact in Arrays & Hashing and retain their verified official `Prefix Sum` tags. The former `prefix-sum` topic ID remains accepted only for historic session records and old links; it resolves to Arrays & Hashing and is not shown as a new pattern.
+
+On 2026-10-08, all selected problem numbers, titles, slugs, difficulties, availability, and topic tags were checked against LeetCode's public metadata endpoints: `https://leetcode.com/api/problems/all/` and `https://leetcode.com/graphql/`. Canonical URLs are built from verified slugs; no problem body was imported. Tags in the UI are selected from the verified official tag set (up to four per problem), with the pattern-relevant tag prioritized. The Miva Buddy pattern grouping and sequence are editorial teaching decisions, not claims that LeetCode has these exact pattern labels. Re-verify metadata and continued availability before material catalog changes.
+
+`src/contracts/practice.ts` validates strict metadata and supported topic IDs; `tests/unit/practice-catalog.test.ts` guards counts, uniqueness, canonical URLs, and legacy identities. The additive `drizzle/0008_expand_practice_topics.sql` constraint allows new session topic IDs without rewriting existing rows. The catalog remains metadata-only and does not establish LeetCode submission awareness.

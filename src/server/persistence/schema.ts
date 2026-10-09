@@ -75,7 +75,7 @@ export const practiceSessions = pgTable("practice_sessions", {
   check("practice_sessions_status_check", sql`${table.status} in ('in_progress', 'completed')`),
   check("practice_sessions_completion_check", sql`(${table.status} = 'completed') = (${table.completedAt} is not null)`),
   check("practice_sessions_problem_slug_check", sql`${table.problemSlug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
-  check("practice_sessions_topic_check", sql`${table.topicId} in ('arrays-hashing', 'two-pointers', 'stack', 'binary-search', 'linked-lists', 'trees', 'graphs-grids')`),
+  check("practice_sessions_topic_check", sql`${table.topicId} in ('arrays-hashing', 'two-pointers', 'sliding-window', 'stack', 'binary-search', 'linked-lists', 'trees', 'backtracking', 'heaps-priority-queues', 'graphs-grids', 'dynamic-programming', 'greedy', 'intervals', 'prefix-sum', 'tries')`),
   index("practice_sessions_user_updated_idx").on(table.userId, table.updatedAt),
 ]);
 

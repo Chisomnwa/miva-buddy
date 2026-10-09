@@ -5,11 +5,19 @@ export const practiceDifficultySchema = z.enum(["Easy", "Medium", "Hard"]);
 export const practiceTopicSchema = z.enum([
   "arrays-hashing",
   "two-pointers",
+  "sliding-window",
   "stack",
   "binary-search",
   "linked-lists",
   "trees",
+  "backtracking",
+  "heaps-priority-queues",
   "graphs-grids",
+  "dynamic-programming",
+  "greedy",
+  "intervals",
+  "prefix-sum",
+  "tries",
 ]);
 
 export const practiceProblemSchema = z.object({
@@ -31,6 +39,7 @@ export const practiceModeSchema = z.enum(["hands_off", "coach", "tutor"]);
 export const practiceSessionStatusSchema = z.enum(["in_progress", "completed"]);
 
 export type PracticeProblem = z.infer<typeof practiceProblemSchema>;
+export type PracticeDifficulty = z.infer<typeof practiceDifficultySchema>;
 export type PracticeTopic = z.infer<typeof practiceTopicSchema>;
 export type PracticeMode = z.infer<typeof practiceModeSchema>;
 export type PracticeSessionStatus = z.infer<typeof practiceSessionStatusSchema>;

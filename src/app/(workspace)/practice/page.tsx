@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PRACTICE_TOPICS, getPracticeProblem } from "@/server/practice/catalog";
+import { PRACTICE_TOPICS, getPracticeProblem, getPracticeProblemsForTopic } from "@/server/practice/catalog";
 
 export default async function PracticePage() {
   const supabase = await createClient();
@@ -12,7 +12,7 @@ export default async function PracticePage() {
   return <section className="simple-page practice-page">
     <p className="eyebrow">PRACTICE · DATA STRUCTURES & ALGORITHMS</p>
     <h1>Choose a path to practise</h1>
-    <p className="intro-copy">Browse a small curated set of original LeetCode problems. Your work stays here; solutions happen on LeetCode.</p>
+    <p className="intro-copy">Explore curated problems across 14 DSA patterns, from first steps to more challenging techniques. Solve on LeetCode and return here for guided practice.</p>
     {sessions && sessions.length > 0 && <section className="practice-resume" aria-labelledby="resume-heading">
       <h2 id="resume-heading">Continue where you left off</h2>
       <ul className="recent-learning-list">{sessions.map((session) => {
@@ -24,7 +24,8 @@ export default async function PracticePage() {
     </section>}
     <section className="practice-topic-grid" aria-label="DSA topics">
       {PRACTICE_TOPICS.map((topic) => <article className="practice-topic-card" key={topic.id}>
-        <p className="eyebrow">TOPIC</p><h2>{topic.label}</h2><p>{topic.description}</p>
+        <p className="eyebrow">DSA PATTERN</p><h2>{topic.label}</h2><p>{topic.description}</p>
+        <p className="practice-topic-count">{getPracticeProblemsForTopic(topic.id).length} curated problems</p>
         <Link className="text-link" href={`/practice/topic/${topic.id}`}>Browse problems <span aria-hidden="true">→</span></Link>
       </article>)}
     </section>

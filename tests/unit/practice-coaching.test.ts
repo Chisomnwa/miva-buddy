@@ -3,6 +3,7 @@ import type { GenerationInput, GenerationProvider } from "@/server/ai/provider";
 import type { PracticeProblem } from "@/contracts/practice";
 import { generatePracticeCoachingReply } from "@/server/practice/coaching";
 import { MalformedProviderOutputError } from "@/server/ai/provider";
+import { FakeGenerationProvider } from "@/server/ai/providers/fake";
 
 vi.mock("server-only", () => ({}));
 
@@ -22,6 +23,23 @@ class SequenceProvider implements GenerationProvider {
 }
 
 describe("Practice coaching generation boundary", () => {
+  it("keeps the development fake provider compatible with current coaching schemas", async () => {
+    for (const mode of ["coach", "tutor", "hands_off"] as const) {
+      const result = await generatePracticeCoachingReply({
+        provider: new FakeGenerationProvider(),
+        mode,
+        message: mode === "hands_off" ? "What do you notice in my comparison?" : "Can you explain one step without giving the answer?",
+        attempt: "const value = source[index];",
+        history: [],
+        problem: twoSum,
+        signal: AbortSignal.timeout(1_000),
+      });
+      expect(result.response.segments.length).toBeGreaterThan(0);
+      expect(result.response.segments.every((segment) => segment.kind !== "complete_answer")).toBe(true);
+      if (mode === "hands_off") expect(result.response.segments.some((segment) => segment.kind === "reflection_question")).toBe(true);
+    }
+  });
+
   it("accepts only a schema- and policy-valid response and keeps problem metadata out of provider context", async () => {
     const provider = new SequenceProvider([safe]);
     const reply = await generatePracticeCoachingReply({ provider, mode: "coach", message: "I am stuck", attempt: "const value = input;", history: [], problem: twoSum, signal: AbortSignal.timeout(1000) });

@@ -57,6 +57,13 @@
       "when": 1791399000000,
       "tag": "0007_practice_coaching",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791480977774,
+      "tag": "0008_expand_practice_topics",
+      "breakpoints": true
     }
   ]
 }

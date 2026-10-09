@@ -11,6 +11,14 @@ describe("deterministic Learn-to-Practice mapping", () => {
     ["Linked lists", "linked-lists"],
     ["Binary trees", "trees"],
     ["Graph traversal", "graphs-grids"],
+    ["Sliding window", "sliding-window"],
+    ["Backtracking", "backtracking"],
+    ["Priority queues", "heaps-priority-queues"],
+    ["Trie and prefix tree", "tries"],
+    ["Dynamic programming", "dynamic-programming"],
+    ["Greedy algorithms", "greedy"],
+    ["Interval overlap", "intervals"],
+    ["Prefix sums", "arrays-hashing"],
   ] as const)("maps %s to %s", (title, topic) => {
     expect(mapConceptToPracticeTopic(title)).toBe(topic);
   });
