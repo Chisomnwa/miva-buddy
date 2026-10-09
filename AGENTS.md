@@ -26,6 +26,8 @@ For M7/M8 work, also read `docs/engineering/milestone-7-job-evidence-source-eval
 
 For Milestone 9 work, also read `docs/engineering/milestone-9-integration-hardening.md` before changing global error/loading behavior, security headers, telemetry, deployment guidance, or final verification status.
 
+For V1 interface refinement, also read `docs/plans/v1-interface-refinement-plan.md`. Its approved Courses navigation update supersedes the older three-item UX diagrams without changing product trust boundaries.
+
 Use `docs/research/research-and-product-decisions.md` for background and rationale.
 
 ## Documentation precedence
