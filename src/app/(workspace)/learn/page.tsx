@@ -25,16 +25,22 @@ export default async function LearnPage() {
           <p>No course material is attached to this conversation.</p>
         </div>
       </div>
-      <aside className="interview-preparation-entry" aria-label="Interview preparation in Learn">
-        <strong>Preparing for an interview?</strong>
-        <p>Name the company and, if you know it, the role. We’ll keep general preparation separate from verified candidate experiences.</p>
-      </aside>
-      <h2 className="learn-ask-heading">Ask a general question</h2>
-      <div className="learning-disclosure" role="note">
-        Your question and a limited amount of recent conversation may be sent to the configured AI provider to generate a reply. Avoid sharing sensitive personal information.
-      </div>
-      <LearnComposer suggestions={["Explain recursion with a small example", "How do hash tables work?", "Quiz me on binary search"]} />
-      <RecentLearning conversations={recent} />
+      <section className="learn-general-question-card" aria-labelledby="learn-ask-heading">
+        <h2 className="learn-ask-heading" id="learn-ask-heading">Ask a general question</h2>
+        <div className="learning-disclosure" role="note">
+          Avoid sharing sensitive personal information.
+        </div>
+        <LearnComposer
+          beforeSuggestions={
+            <aside className="learn-interview-prompt" aria-label="Interview preparation">
+              <h3>Preparing for an interview?</h3>
+              <p>Ask a question about a company, role, or interview stage. Preparation is general guidance; external searches are not verified candidate experiences.</p>
+            </aside>
+          }
+          suggestions={["Explain recursion with a small example", "How do hash tables work?", "Quiz me on binary search"]}
+        />
+      </section>
+      <RecentLearning conversations={recent} collapsible />
     </section>
   );
 }

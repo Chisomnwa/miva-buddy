@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { LearnVoiceInput } from "@/components/learn-voice-input";
 
 type LearnComposerProps = {
   conversationId?: string;
   suggestions?: string[];
+  beforeSuggestions?: ReactNode;
 };
 
 function publicError(error: unknown) {
@@ -18,7 +20,7 @@ function publicError(error: unknown) {
   return "We couldn’t send that message. Please try again.";
 }
 
-export function LearnComposer({ conversationId, suggestions = [] }: LearnComposerProps) {
+export function LearnComposer({ conversationId, suggestions = [], beforeSuggestions }: LearnComposerProps) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
@@ -62,6 +64,7 @@ export function LearnComposer({ conversationId, suggestions = [] }: LearnCompose
 
   return (
     <div className="learn-composer-wrap">
+      {beforeSuggestions}
       {suggestions.length > 0 && (
         <div className="learn-suggestions" aria-label="Suggested questions">
           <p className="suggestions-label">Try a question</p>
