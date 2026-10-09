@@ -25,6 +25,11 @@ export default async function LearnPage() {
           <p>No course material is attached to this conversation.</p>
         </div>
       </div>
+      <aside className="interview-preparation-entry" aria-label="Interview preparation in Learn">
+        <strong>Preparing for an interview?</strong>
+        <p>Name the company and, if you know it, the role. We’ll keep general preparation separate from verified candidate experiences.</p>
+      </aside>
+      <h2 className="learn-ask-heading">Ask a general question</h2>
       <div className="learning-disclosure" role="note">
         Your question and a limited amount of recent conversation may be sent to the configured AI provider to generate a reply. Avoid sharing sensitive personal information.
       </div>

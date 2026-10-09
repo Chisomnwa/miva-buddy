@@ -126,6 +126,48 @@ test("profile submission creates a browser identity, persists, and remains isola
   await expect(page.getByRole("heading", { name: "Recent learning" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Explain binary trees with a small example/ })).toBeVisible();
 
+  await page.locator("a.nav-link[href='/learn']:visible").first().click();
+  await expect(page).toHaveURL(/learn$/);
+  await page.getByLabel("Ask a question").fill("Help me prepare for an interview for a backend engineering internship.");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page).toHaveURL(/\/learn\/[0-9a-f-]+$/i, { timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "A quick clarification" })).toBeVisible();
+  await expect(page.getByText(/Which company is the interview with/)).toBeVisible();
+  await page.getByLabel("Ask a question").fill("Coinbase");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByRole("heading", { name: "General interview preparation—not company-specific" })).toBeVisible();
+  await expect(page.getByText("Company:").locator(".." )).toContainText("Coinbase");
+  await expect(page.getByText(/Company-specific candidate accounts are not available in this version; no external source was queried/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Topics to review" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "General mock prompts—not company questions" })).toBeVisible();
+  const hackerNewsSearch = page.getByRole("link", { name: "Search Hacker News discussions (external)" });
+  const leetCodeSearch = page.getByRole("link", { name: "Search LeetCode Discuss (external)" });
+  await expect(hackerNewsSearch).toHaveAttribute("target", "_blank");
+  await expect(hackerNewsSearch).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(leetCodeSearch).toHaveAttribute("target", "_blank");
+  await expect(leetCodeSearch).toHaveAttribute("rel", "noopener noreferrer");
+  const hnQuery = new URL(await hackerNewsSearch.getAttribute("href") ?? "").searchParams.get("q");
+  const leetCodeQuery = new URL(await leetCodeSearch.getAttribute("href") ?? "").searchParams.get("q");
+  expect(hnQuery).toContain("site:news.ycombinator.com/item");
+  expect(hnQuery).toContain("Coinbase");
+  expect(hnQuery).toContain("backend engineering internship");
+  expect(leetCodeQuery).toContain("site:leetcode.com/discuss");
+  expect(leetCodeQuery).toContain("Coinbase");
+  expect(leetCodeQuery).toContain("backend engineering internship");
+  await expect(page.getByText(/Miva Buddy does not fetch or review the results/)).toBeVisible();
+  await expect(page.getByText(/Coinbase.{0,40}(?:uses|asks|has|includes)/i)).toHaveCount(0);
+  const interviewConversationUrl = page.url();
+  await page.reload();
+  await expect(page).toHaveURL(interviewConversationUrl);
+  await expect(page.getByRole("heading", { name: "General interview preparation—not company-specific" })).toBeVisible();
+  await expect(page.getByText("Company:").locator(".." )).toContainText("Coinbase");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(hackerNewsSearch).toBeVisible();
+  await expect(leetCodeSearch).toBeVisible();
+  expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(390);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
   await page.setViewportSize({ width: 390, height: 844 });
   const longProse = "A clear explanation should wrap within the phone screen without hiding the composer. ".repeat(10);
   const longCodeLine = `const unusuallyLongIdentifierWithoutBreaks${"x".repeat(100)} = 42;`;

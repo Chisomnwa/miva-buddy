@@ -15,6 +15,7 @@ export const learnStoredMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string(),
   follow_up_questions: z.array(z.string()).default([]),
+  response_segments: z.array(z.unknown()).default([]),
   created_at: z.string(),
 });
 

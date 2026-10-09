@@ -293,8 +293,8 @@ The repository structure has been established through M8. Existing paths below a
 ```text
 src/
   app/                 onboarding, workspace, Learn API/pages, course routes, and server actions
-  components/          shared shell, Learn UI, profile form, and course/material forms
-  contracts/           profile, Learn, and course/material validation
+  components/          shared shell, Learn UI, interview-preparation card, profile form, and course/material forms
+  contracts/           profile, Learn, interview evidence, and course/material validation
   lib/                 environment, profile/learning helpers, and Supabase SSR client
   server/persistence/  Drizzle schemas and PostgreSQL pool
   features/            planned feature modules
@@ -302,6 +302,7 @@ src/
     application/       planned use-case orchestration
     domain/            planned deterministic rules and state transitions
     ai/                implemented direct-learning provider contract/adapters; other AI workflows planned
+    interview-preparation/ implemented intent extraction and deterministic generic guidance; external retrieval planned and permission-gated
     ingestion/         implemented PDF extraction, chunking, and concept pipeline
     retrieval/         planned course and job retrieval
     storage/           planned private file storage

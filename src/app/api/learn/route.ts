@@ -8,6 +8,7 @@ import { learningSystemPrompt, selectRecentContext } from "@/server/ai/learning-
 import { MalformedProviderOutputError, type GenerationMessage } from "@/server/ai/provider";
 import { generateLearningReply } from "@/server/ai/structured-learning";
 import { recordSafeOperation } from "@/server/observability/safe-telemetry";
+import { buildInterviewPreparation, interviewMessageContent, latestInterviewPreparationSegment } from "@/server/interview-preparation/prepare";
 
 const maxRequestBytes = 16_384;
 const maxMessagesPerMinute = 8;
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
 
   const { data: history, error: historyError } = await supabase
     .from("learn_messages")
-    .select("role, content")
+    .select("role, content, response_segments")
     .eq("conversation_id", conversationId)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
@@ -118,35 +119,53 @@ export async function POST(request: Request) {
     .limit(8);
   if (historyError || !history) return json({ error: "learning_unavailable", conversationId }, 503);
 
+  const orderedHistory = history.reverse();
+  const priorAssistantMessage = [...orderedHistory].reverse().find((message) => message.role === "assistant");
+  const previousInterviewSegment = latestInterviewPreparationSegment(
+    Array.isArray(priorAssistantMessage?.response_segments) ? priorAssistantMessage.response_segments : [],
+  );
+  const interviewPreparation = buildInterviewPreparation({
+    message: parsed.data.message,
+    previousAssistantSegment: previousInterviewSegment ?? undefined,
+  });
   const messages: GenerationMessage[] = [
     { role: "system", content: learningSystemPrompt },
-    ...selectRecentContext(history.reverse().map((message) => ({
+    ...selectRecentContext(orderedHistory.map((message) => ({
       role: message.role as "user" | "assistant",
       content: message.content,
     }))),
   ];
 
-  let reply;
+  let reply: { answer: string; followUpQuestions: string[] };
+  let responseSegments: unknown[] = [];
   const providerStartedAt = Date.now();
   let providerName: "fake" | "ollama" | "gemini" | "groq" | "unknown" = "unknown";
-  try {
-    const config = getServerConfig();
-    providerName = config.AI_PROVIDER;
-    const provider = createGenerationProvider();
-    if (config.AI_PROVIDER === "fake" && process.env.NODE_ENV === "production") {
-      return json({ error: "provider_unavailable", conversationId }, 503);
+  if (interviewPreparation) {
+    reply = {
+      answer: interviewMessageContent(interviewPreparation),
+      followUpQuestions: interviewPreparation.followUpQuestions,
+    };
+    responseSegments = [interviewPreparation];
+  } else {
+    try {
+      const config = getServerConfig();
+      providerName = config.AI_PROVIDER;
+      const provider = createGenerationProvider();
+      if (config.AI_PROVIDER === "fake" && process.env.NODE_ENV === "production") {
+        return json({ error: "provider_unavailable", conversationId }, 503);
+      }
+      const signal = AbortSignal.any([request.signal, AbortSignal.timeout(generationTimeoutMs)]);
+      reply = await generateLearningReply(provider, messages, signal);
+      recordSafeOperation({ operation: "learn", provider: providerName, outcome: "success", durationMs: Date.now() - providerStartedAt });
+    } catch (error) {
+      const outcome = request.signal.aborted ? "cancelled" : error instanceof MalformedProviderOutputError ? "invalid_output" : "failure";
+      recordSafeOperation({ operation: "learn", provider: providerName, outcome, durationMs: Date.now() - providerStartedAt });
+      if (request.signal.aborted) return json({ error: "request_cancelled", conversationId }, 499);
+      return json({
+        error: error instanceof MalformedProviderOutputError ? "invalid_provider_response" : "provider_unavailable",
+        conversationId,
+      }, error instanceof MalformedProviderOutputError ? 502 : 503);
     }
-    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(generationTimeoutMs)]);
-    reply = await generateLearningReply(provider, messages, signal);
-    recordSafeOperation({ operation: "learn", provider: providerName, outcome: "success", durationMs: Date.now() - providerStartedAt });
-  } catch (error) {
-    const outcome = request.signal.aborted ? "cancelled" : error instanceof MalformedProviderOutputError ? "invalid_output" : "failure";
-    recordSafeOperation({ operation: "learn", provider: providerName, outcome, durationMs: Date.now() - providerStartedAt });
-    if (request.signal.aborted) return json({ error: "request_cancelled", conversationId }, 499);
-    return json({
-      error: error instanceof MalformedProviderOutputError ? "invalid_provider_response" : "provider_unavailable",
-      conversationId,
-    }, error instanceof MalformedProviderOutputError ? 502 : 503);
   }
 
   const { error: saveAnswerError } = await supabase.from("learn_messages").insert({
@@ -155,6 +174,7 @@ export async function POST(request: Request) {
     role: "assistant",
     content: reply.answer,
     follow_up_questions: reply.followUpQuestions,
+    response_segments: responseSegments,
   });
   if (saveAnswerError) return json({ error: "learning_unavailable", conversationId }, 503);
 

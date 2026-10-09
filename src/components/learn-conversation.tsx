@@ -1,41 +1,24 @@
-import type { ReactNode } from "react";
 import type { LearnStoredMessage } from "@/contracts/learning";
+import { MessageContent } from "@/components/message-content";
 import { CopyResponseButton } from "@/components/copy-response-button";
+import { InterviewPreparationCard } from "@/components/interview-preparation-card";
 
-function renderMessageContent(content: string) {
-  const blocks: ReactNode[] = [];
-  const fencedCode = /```[^\n`]*\n([\s\S]*?)```/g;
-  let cursor = 0;
-  let index = 0;
+type LearnMessageForDisplay = Omit<LearnStoredMessage, "response_segments"> & { response_segments?: unknown[] };
 
-  for (const match of content.matchAll(fencedCode)) {
-    const start = match.index ?? 0;
-    if (start > cursor) blocks.push(<span key={`text-${index++}`}>{content.slice(cursor, start)}</span>);
-    blocks.push(
-      <pre aria-label="Code example" className="learn-code-block" key={`code-${index++}`} tabIndex={0}>
-        <code>{match[1]}</code>
-      </pre>,
-    );
-    cursor = start + match[0].length;
-  }
-
-  if (cursor < content.length || blocks.length === 0) {
-    blocks.push(<span key={`text-${index}`}>{content.slice(cursor)}</span>);
-  }
-
-  return blocks;
-}
-
-export function LearnConversation({ messages }: { messages: LearnStoredMessage[] }) {
+export function LearnConversation({ messages }: { messages: LearnMessageForDisplay[] }) {
   return (
     <div className="learn-transcript" aria-live="polite">
-      {messages.map((message) => (
-        <article className={`learn-message ${message.role === "assistant" ? "learn-message-assistant" : "learn-message-student"}`} key={message.id}>
+      {messages.map((message) => {
+        const interviewSegment = message.role === "assistant" ? message.response_segments?.find((segment) =>
+          typeof segment === "object" && segment !== null && "kind" in segment && segment.kind === "interview_preparation",
+        ) : undefined;
+        return <article className={`learn-message ${message.role === "assistant" ? "learn-message-assistant" : "learn-message-student"}`} key={message.id}>
           <p className="eyebrow">{message.role === "assistant" ? "MIVA BUDDY" : "YOU"}</p>
-          <div className="learn-message-content">{renderMessageContent(message.content)}</div>
-          {message.role === "assistant" && <div className="message-actions"><CopyResponseButton content={message.content} /></div>}
-        </article>
-      ))}
+          {interviewSegment ? <InterviewPreparationCard value={interviewSegment} id={message.id} />
+            : <div className="learn-message-content"><MessageContent content={message.content} /></div>}
+          {message.role === "assistant" && !interviewSegment && <div className="message-actions"><CopyResponseButton content={message.content} /></div>}
+        </article>;
+      })}
     </div>
   );
 }

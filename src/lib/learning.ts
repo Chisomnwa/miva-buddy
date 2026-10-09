@@ -34,7 +34,7 @@ export async function getLearnConversation(userId: string, conversationId: strin
 
   const { data, error } = await supabase
     .from("learn_messages")
-    .select("id, role, content, follow_up_questions, created_at")
+    .select("id, role, content, follow_up_questions, response_segments, created_at")
     .eq("conversation_id", conversationId)
     .eq("user_id", userId)
     .order("created_at", { ascending: true })

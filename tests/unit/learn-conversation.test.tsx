@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { LearnConversation } from "@/components/learn-conversation";
+import { buildInterviewPreparation, interviewMessageContent } from "@/server/interview-preparation/prepare";
 
 const message = {
   id: "0d7718f0-b522-4f4d-9d5e-a764d75857ac",
@@ -27,5 +28,18 @@ describe("Learn conversation rendering", () => {
 
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
+  });
+
+  it("renders the persisted interview-preparation state as a distinct general-guidance card", () => {
+    const segment = buildInterviewPreparation({ message: "I have an interview at Coinbase for a backend engineering internship. Help me prepare." });
+    const html = renderToStaticMarkup(<LearnConversation messages={[{
+      ...message,
+      content: interviewMessageContent(segment!),
+      response_segments: [segment],
+    }]} />);
+    expect(html).toContain("General interview preparation—not company-specific");
+    expect(html).toContain("Company: <strong>Coinbase</strong>");
+    expect(html).toContain("General mock prompts—not company questions");
+    expect(html).not.toContain("Coinbase uses");
   });
 });
