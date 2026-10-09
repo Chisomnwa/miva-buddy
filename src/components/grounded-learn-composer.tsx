@@ -69,6 +69,7 @@ export function GroundedLearnComposer({ courseId, materialId, conceptId, convers
 
   return <div className="learn-composer-wrap">
     {suggestions.length > 0 && <div className="learn-suggestions" aria-label="Suggested follow-up questions">
+      <p className="suggestions-label">Continue learning</p>
       {suggestions.map((suggestion) => <button key={suggestion} className="suggestion-chip" type="button" onClick={() => setMessage(suggestion)}>{suggestion}</button>)}
     </div>}
     <form className="learn-composer" onSubmit={submit}>
