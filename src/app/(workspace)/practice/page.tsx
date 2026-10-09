@@ -1,33 +1,28 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PRACTICE_TOPICS, getPracticeProblem, getPracticeProblemsForTopic } from "@/server/practice/catalog";
+import { PracticePatternList } from "@/components/practice-pattern-list";
+import { PracticeResumeSection } from "@/components/practice-resume-section";
+import { PRACTICE_CATALOG, getPracticeProblem } from "@/server/practice/catalog";
 
 export default async function PracticePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: sessions, error } = user ? await supabase.from("practice_sessions")
     .select("id,problem_slug,topic_id,mode,status,updated_at")
-    .eq("user_id", user.id).eq("status", "in_progress").order("updated_at", { ascending: false }).limit(8) : { data: [], error: null };
-  if (error) throw new Error("practice_resume_lookup_failed");
+    .eq("user_id", user.id).in("problem_slug", PRACTICE_CATALOG.map((problem) => problem.slug))
+    .order("updated_at", { ascending: false }) : { data: [], error: null };
+  const progressAvailable = Boolean(user && !error);
+  const availableSessions = progressAvailable ? sessions ?? [] : [];
+  const resumableSessions = availableSessions.filter((session) => session.status === "in_progress").flatMap((session) => {
+    const problem = getPracticeProblem(session.problem_slug);
+    return problem ? [{ id: session.id, title: problem.title, difficulty: problem.difficulty, mode: session.mode }] : [];
+  });
   return <section className="simple-page practice-page">
     <p className="eyebrow">PRACTICE · DATA STRUCTURES & ALGORITHMS</p>
     <h1>Choose a path to practise</h1>
     <p className="intro-copy">Explore curated problems across 14 DSA patterns, from first steps to more challenging techniques. Solve on LeetCode and return here for guided practice.</p>
-    {sessions && sessions.length > 0 && <section className="practice-resume" aria-labelledby="resume-heading">
-      <h2 id="resume-heading">Continue where you left off</h2>
-      <ul className="recent-learning-list">{sessions.map((session) => {
-        const problem = getPracticeProblem(session.problem_slug);
-        return problem ? <li key={session.id}><Link href={`/practice/session/${session.id}`}>
-          <span>{problem.title}<small className="practice-list-meta">{problem.difficulty} · {session.mode === "coach" ? "Coach" : session.mode === "tutor" ? "Tutor" : "Hands Off"}</small></span><span aria-hidden="true">→</span>
-        </Link></li> : null;
-      })}</ul>
-    </section>}
-    <section className="practice-topic-grid" aria-label="DSA topics">
-      {PRACTICE_TOPICS.map((topic) => <article className="practice-topic-card" key={topic.id}>
-        <p className="eyebrow">DSA PATTERN</p><h2>{topic.label}</h2><p>{topic.description}</p>
-        <p className="practice-topic-count">{getPracticeProblemsForTopic(topic.id).length} curated problems</p>
-        <Link className="text-link" href={`/practice/topic/${topic.id}`}>Browse problems <span aria-hidden="true">→</span></Link>
-      </article>)}
-    </section>
+    <PracticeResumeSection items={resumableSessions} />
+    {!progressAvailable && <p className="practice-progress-unavailable" role="status">Your saved progress is temporarily unavailable. You can still browse and start a problem.</p>}
+    <p className="practice-completion-disclosure">Completion is your own check-in; Miva Buddy does not verify LeetCode submissions.</p>
+    <PracticePatternList sessions={availableSessions} progressAvailable={progressAvailable} />
   </section>;
 }
