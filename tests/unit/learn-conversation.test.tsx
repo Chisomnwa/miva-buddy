@@ -37,9 +37,38 @@ describe("Learn conversation rendering", () => {
       content: interviewMessageContent(segment!),
       response_segments: [segment],
     }]} />);
-    expect(html).toContain("General interview preparation—not company-specific");
+    expect(html).toContain("General interview preparation</h2>");
     expect(html).toContain("Company: <strong>Coinbase</strong>");
-    expect(html).toContain("General mock prompts—not company questions");
+    expect(html).toContain("General mock prompts — not company questions");
     expect(html).not.toContain("Coinbase uses");
+  });
+
+  it("recovers and renders corrected context for an existing saved conversation", () => {
+    const original = buildInterviewPreparation({ message: "I have an onsite interview at coinbase." })!;
+    const staleSegment = { ...original, company: "Coinbase looks like" };
+    const userMessages = [
+      "I have an onsite interview at coinbase.",
+      "It's a software engineering internship role.",
+      "I want to know what interviewing at Coinbase looks like.",
+    ];
+    const messages = [
+      ...userMessages.map((content, index) => ({
+        ...message,
+        id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+        role: "user" as const,
+        content,
+      })),
+      { ...message, content: "Old saved preparation response", response_segments: [staleSegment] },
+      { ...message, id: "0d7718f0-b522-4f4d-9d5e-a764d75857ab", content: "A regular explanation." },
+    ];
+
+    const html = renderToStaticMarkup(<LearnConversation messages={messages} />);
+    expect(html).toContain("Company: <strong>Coinbase</strong>");
+    expect(html).not.toContain("Company: <strong>Coinbase looks like</strong>");
+    expect(html).toContain("Role: <strong>Software Engineering Internship</strong>");
+    expect(html).toContain("Stage: <strong>On-site interview</strong>");
+    expect(html).toContain("INTERVIEW PREPARATION");
+    expect(html).not.toContain("MIVA BUDDY</p><section class=\"interview-preparation-card");
+    expect(html).toContain('<p class="eyebrow">MIVA BUDDY</p><div class="learn-message-content"><span>A regular explanation.</span></div>');
   });
 });

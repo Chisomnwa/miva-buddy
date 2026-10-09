@@ -36,14 +36,32 @@ describe("user-directed interview searches", () => {
     const prep = buildInterviewPreparation({ message: "Prepare for a backend engineer interview at Coinbase." });
     const html = renderToStaticMarkup(<InterviewPreparationCard value={prep} id="sample" />);
     expect(html).toContain("Explore interview experiences");
-    expect(html).toContain("Miva Buddy does not fetch or review the results");
     expect(html).toContain('rel="noopener noreferrer"');
     expect(html).toContain('target="_blank"');
     expect(html).toContain("Search Hacker News discussions (external)");
     expect(html).toContain("Search LeetCode Discuss (external)");
-    expect(html).toContain("General interview preparation—not company-specific");
+    expect(html).toContain("General interview preparation</h2>");
+    expect(html).toContain("Open an external search for discussions about this company and role.");
+    expect(html).not.toContain("External search results are not verified candidate accounts.");
+    expect(html).toContain("Search Hacker News discussions (external)");
+    expect(html).toContain("Search LeetCode Discuss (external)");
+    expect(html).not.toContain("Miva Buddy does not fetch or review the results");
     expect(html).not.toContain("news.ycombinator.com/item?id=");
     expect(html).not.toContain("leetcode.com/discuss/post/");
+  });
+
+  it("renders company and follow-up role in both external search queries", () => {
+    const firstTurn = buildInterviewPreparation({ message: "I have an onsite interview at Coinbase." });
+    const followUp = buildInterviewPreparation({
+      message: "It's a software engineering internship role.",
+      previousAssistantSegment: firstTurn,
+    });
+    const html = renderToStaticMarkup(<InterviewPreparationCard value={followUp} id="coinbase-follow-up" />);
+    const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]!.replaceAll("&amp;", "&"));
+    const searchQueries = hrefs.map((href) => new URL(href).searchParams.get("q"));
+    expect(searchQueries).toContain('site:news.ycombinator.com/item "Coinbase" "software engineering internship" interview');
+    expect(searchQueries).toContain('site:leetcode.com/discuss "Coinbase" "software engineering internship" interview experience');
+    expect(html).not.toContain("External search results are not verified candidate accounts.");
   });
 
   it("does not show searches until the student resolves the company clarification", () => {

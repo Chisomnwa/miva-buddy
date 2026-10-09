@@ -16,14 +16,18 @@ const genericCompanyNames = new Set(["a company", "the company", "a team", "them
 
 export function isInterviewPreparationIntent(message: string) {
   const normalized = message.toLowerCase();
-  return /\binterviews?\b/.test(normalized)
-    && /\b(?:prepare|preparation|prep|candidates?|experiences?|rounds?|stages?|mock|questions?|practice|expect|help me|how should i)\b/.test(normalized);
+  return /\b(?:interviews?|interviewing)\b/.test(normalized)
+    && (/\b(?:prepare|preparation|prep|candidates?|experiences?|rounds?|stages?|mock|questions?|practice|expect|help me|how should i)\b/.test(normalized)
+      || /\b(?:i have|i've got|i am scheduled for|i'm scheduled for|i am attending|i'm attending)\b.{0,60}\binterview\b/i.test(message)
+      || /\bwhat\b.{0,50}\binterviewing\b.{0,60}\blooks like\b/i.test(message));
 }
 
 function extractCompany(message: string, isClarificationReply: boolean): { company: string | null; ambiguous: boolean } {
   let candidate: string | undefined;
+  const interviewingLooksLike = message.match(/\binterviewing\s+at\s+(.+?)\s+looks like\b/i);
+  if (interviewingLooksLike?.[1]) candidate = interviewingLooksLike[1];
   const interviewPhrase = message.match(/\binterview(?:ing)?\b[^.!?]{0,120}?\b(?:at|with)\s+([^,.!?]+)/i);
-  if (interviewPhrase?.[1]) candidate = interviewPhrase[1];
+  if (!candidate && interviewPhrase?.[1]) candidate = interviewPhrase[1];
   if (!candidate && isClarificationReply) {
     const answerWithCompany = message.match(/\b(?:at|with)\s+([^,.!?]+)/i);
     if (answerWithCompany?.[1]) candidate = answerWithCompany[1];
@@ -50,6 +54,10 @@ function extractRole(message: string, clarificationReply = false) {
     if (roleBeforeCompany && /\b(?:engineer|developer|intern|analyst|scientist|designer|manager|architect)\b/i.test(roleBeforeCompany)) {
       return roleBeforeCompany;
     }
+  }
+  const statedRole = message.match(/\b(?:it(?:'s| is)|the role is)\s+(?:an?\s+)?(.{2,100}?)\s+role\b/i)?.[1]?.trim();
+  if (statedRole && /\b(?:internship|intern|engineer|developer|analyst|scientist|designer|manager|architect|researcher|consultant)\b/i.test(statedRole)) {
+    return statedRole;
   }
   const roleWords = /\b(?:internship|intern|engineer|developer|analyst|scientist|designer|manager|architect|researcher|consultant)\b/i;
   for (const match of message.matchAll(/\b(?:for|as)\s+(?:(?:a|an|the)\s+)?/gi)) {
@@ -84,6 +92,27 @@ export function latestInterviewPreparationSegment(segments: unknown[]): PriorInt
     if (parsed) return parsed;
   }
   return null;
+}
+
+/** Recover interview context for older conversations whose assistant turn predates structured segments. */
+export function recoverPreviousInterviewPreparationSegment(
+  assistantSegments: unknown[],
+  previousUserMessages: string[],
+): PriorInterviewSegment | null {
+  const stored = latestInterviewPreparationSegment(assistantSegments);
+  let recovered: PriorInterviewSegment | null = null;
+  for (const message of previousUserMessages) {
+    const next = buildInterviewPreparation({ message, previousAssistantSegment: recovered ?? undefined });
+    if (next) recovered = next;
+  }
+  if (!stored) return recovered?.requestState === "ready" ? recovered : null;
+  if (!recovered || recovered.requestState !== "ready") return stored;
+  return {
+    ...stored,
+    company: recovered.company ?? stored.company,
+    roleTitle: recovered.roleTitle ?? stored.roleTitle,
+    interviewStage: recovered.interviewStage ?? stored.interviewStage,
+  };
 }
 
 function roleFamily(roleTitle: string | null): "backend" | "frontend" | "data" | "machine_learning" | "software" {

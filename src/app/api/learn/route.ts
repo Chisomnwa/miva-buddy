@@ -8,7 +8,7 @@ import { learningSystemPrompt, selectRecentContext } from "@/server/ai/learning-
 import { MalformedProviderOutputError, type GenerationMessage } from "@/server/ai/provider";
 import { generateLearningReply } from "@/server/ai/structured-learning";
 import { recordSafeOperation } from "@/server/observability/safe-telemetry";
-import { buildInterviewPreparation, interviewMessageContent, latestInterviewPreparationSegment } from "@/server/interview-preparation/prepare";
+import { buildInterviewPreparation, interviewMessageContent, recoverPreviousInterviewPreparationSegment } from "@/server/interview-preparation/prepare";
 
 const maxRequestBytes = 16_384;
 const maxMessagesPerMinute = 8;
@@ -121,8 +121,12 @@ export async function POST(request: Request) {
 
   const orderedHistory = history.reverse();
   const priorAssistantMessage = [...orderedHistory].reverse().find((message) => message.role === "assistant");
-  const previousInterviewSegment = latestInterviewPreparationSegment(
-    Array.isArray(priorAssistantMessage?.response_segments) ? priorAssistantMessage.response_segments : [],
+  const priorAssistantSegments =
+    Array.isArray(priorAssistantMessage?.response_segments) ? priorAssistantMessage.response_segments : [];
+  const priorUserMessages = orderedHistory.filter((message) => message.role === "user");
+  const previousInterviewSegment = recoverPreviousInterviewPreparationSegment(
+    priorAssistantSegments,
+    priorUserMessages.slice(0, -1).map((message) => message.content),
   );
   const interviewPreparation = buildInterviewPreparation({
     message: parsed.data.message,

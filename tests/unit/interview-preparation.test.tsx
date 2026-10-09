@@ -2,13 +2,65 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { interviewEvidenceResultSchema } from "@/contracts/interview-evidence";
 import { InterviewPreparationCard } from "@/components/interview-preparation-card";
-import { buildInterviewPreparation, isInterviewPreparationIntent, latestInterviewPreparationSegment } from "@/server/interview-preparation/prepare";
+import { buildInterviewPreparation, isInterviewPreparationIntent, latestInterviewPreparationSegment, recoverPreviousInterviewPreparationSegment } from "@/server/interview-preparation/prepare";
 
 describe("company interview preparation in Learn", () => {
   it("recognizes preparation requests without classifying ordinary Learn questions", () => {
     expect(isInterviewPreparationIntent("I have an interview at Coinbase. Help me prepare." )).toBe(true);
+    expect(isInterviewPreparationIntent("I have an onsite interview at Coinbase." )).toBe(true);
     expect(isInterviewPreparationIntent("What have other candidates experienced in interviews at Coinbase?" )).toBe(true);
     expect(isInterviewPreparationIntent("Explain binary search with an example." )).toBe(false);
+    expect(isInterviewPreparationIntent("I want to know what interviewing at Coinbase looks like.")).toBe(true);
+  });
+
+  it("extracts only the company before a conversational looks-like clause", () => {
+    const result = buildInterviewPreparation({ message: "I want to know what interviewing at Coinbase looks like." });
+    expect(result).toMatchObject({ requestState: "ready", company: "Coinbase" });
+  });
+
+  it("preserves legitimate company names that contain conversational-looking words", () => {
+    const result = buildInterviewPreparation({ message: "Prepare for an interview at Looks Like Labs." });
+    expect(result?.company).toBe("Looks Like Labs");
+  });
+
+  it("preserves Coinbase context and extracts a role from the follow-up wording", () => {
+    const firstTurn = buildInterviewPreparation({ message: "I have an onsite interview at Coinbase." });
+    expect(firstTurn).toMatchObject({ requestState: "ready", company: "Coinbase", interviewStage: "onsite interview" });
+
+    const followUp = buildInterviewPreparation({
+      message: "It's a software engineering internship role.",
+      previousAssistantSegment: firstTurn,
+    });
+    expect(followUp).toMatchObject({
+      requestState: "ready",
+      company: "Coinbase",
+      roleTitle: "software engineering internship",
+      interviewStage: "onsite interview",
+    });
+  });
+
+  it("recovers company context when an older assistant reply has no interview segment", () => {
+    const recovered = recoverPreviousInterviewPreparationSegment([], [
+      "I have an onsite interview at Coinbase.",
+      "It's a software engineering internship role.",
+    ]);
+    expect(recovered).toMatchObject({ company: "Coinbase", roleTitle: "software engineering internship" });
+  });
+
+  it("repairs stale structured company metadata from the saved conversation's user turns", () => {
+    const original = buildInterviewPreparation({ message: "I have an onsite interview at coinbase." })!;
+    const staleSegment = { ...original, company: "Coinbase looks like" };
+    const recovered = recoverPreviousInterviewPreparationSegment([staleSegment], [
+      "I have an onsite interview at coinbase.",
+      "It's a software engineering internship role.",
+      "I want to know what interviewing at Coinbase looks like.",
+    ]);
+
+    expect(recovered).toMatchObject({
+      company: "Coinbase",
+      roleTitle: "software engineering internship",
+      interviewStage: "onsite interview",
+    });
   });
 
   it("extracts the explicitly stated company, role, and interview stage", () => {
@@ -58,6 +110,30 @@ describe("company interview preparation in Learn", () => {
     expect(result?.studyPlan).toHaveLength(3);
   });
 
+  it("renders a full, accessible disclosure with normalized context and grouped guidance", () => {
+    const firstTurn = buildInterviewPreparation({ message: "I have an onsite interview at Coinbase." });
+    const result = buildInterviewPreparation({
+      message: "It's a software engineering internship role.",
+      previousAssistantSegment: firstTurn,
+    });
+    const html = renderToStaticMarkup(<InterviewPreparationCard value={result} id="coinbase" />);
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('aria-controls="interview-prep-content-coinbase"');
+    expect(html).toContain("General interview preparation</h2>");
+    expect(html).toContain("Company: <strong>Coinbase</strong>");
+    expect(html).toContain("Role: <strong>Software Engineering Internship</strong>");
+    expect(html).toContain("Stage: <strong>On-site interview</strong>");
+    expect(html).toContain("This preparation is tailored to the software engineering internship and the on-site interview you mentioned.");
+    expect(html).not.toContain("no external source was queried");
+    expect(html).toContain("General guidance — not verified company information");
+    expect(html).toContain("These suggestions are based only on the role and interview details you provided. They do not describe the employer&#x27;s interview process.");
+    expect((html.match(/class="interview-guidance-block"/g) ?? [])).toHaveLength(1);
+    expect(html).toContain("Topics to review");
+    expect(html).toContain("Practice suggestions");
+    expect(html).toContain("General mock prompts — not company questions");
+    expect(html).toContain("A short study plan");
+  });
+
   it("validates the four evidence states as distinct outcomes", () => {
     const found = {
       state: "found", records: [{
@@ -82,7 +158,7 @@ describe("company interview preparation in Learn", () => {
     });
     expect(statusCopies[0]).toContain("permitted search completed");
     expect(statusCopies[1]).toContain("could not be checked reliably");
-    expect(statusCopies[2]).toContain("no external source was queried");
+    expect(statusCopies[2]).not.toContain("no external source was queried");
   });
 
   it("persists clarification mode in the structured assistant segment for the next turn", () => {
