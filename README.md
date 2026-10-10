@@ -1,38 +1,131 @@
 # Miva Buddy
 
-Miva Buddy is a responsive learning companion for Miva Open University Computer Science and Software Engineering students. Students can learn directly or from their course materials, practise curated DSA problems with bounded coaching, and resume their work in the same browser.
+Miva Buddy is a learning companion for Computer Science and Software Engineering students. I built it as an independent student project for Miva Open University students. It is not an official Miva University product.
 
-## Run locally
+I started building it around a familiar moment: you finish a lecture, but the idea still does not quite make sense. Your notes are in one place, a video in another, an AI chat somewhere else, and practice problems on a separate site. It can be hard to know what to study next, or how to get help without giving away the answer.
 
-Requirements: Node.js 20+, npm, and a configured hosted Supabase development project. Docker is not required. Course-material processing additionally needs the separate worker and an Ollama service with `nomic-embed-text` available.
+Miva Buddy brings course learning and DSA practice together, and makes room for career preparation without pretending to know more than its sources do.
 
-1. Install the locked dependencies:
+## What it is like to use
 
-   ```sh
-   npm ci
-   ```
+### When you’re studying a course
 
-2. Create or update the ignored `.env.local` in the repository root. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from the development project. Configure server-only `DATABASE_URL` for PostgreSQL-backed queue work and `AI_PROVIDER`/provider credentials for the desired model. For local embeddings, set `EMBEDDING_PROVIDER=ollama`, `OLLAMA_BASE_URL`, and `OLLAMA_EMBEDDING_MODEL=nomic-embed-text:latest`. See [environment and deployment readiness](docs/engineering/deployment-readiness.md) and [Supabase setup](docs/engineering/milestone-1-supabase-setup.md). Never paste secret values into chat or commit `.env.local`.
+Create a course, then add lecture notes or a PDF. Miva Buddy processes the material, finds concepts to explore, and keeps page references so you can see where a grounded answer came from.
 
-3. Start the web application:
+You can also ask a general question in Learn. That conversation has no course material attached, so its answer is a general explanation—not a course-grounded one. Conversations are saved so you can come back to them. If your browser supports speech recognition, you can dictate into the Learn composer, review and edit the text, then send it yourself.
 
-   ```sh
-   npm run dev
-   ```
+### When you’re practising DSA
 
-4. Open [http://localhost:3000](http://localhost:3000). First-time students land on onboarding; no email/password sign-in is required.
+Choose from 14 patterns and 107 curated problems. Open a problem in Miva Buddy, follow its link to the original LeetCode problem, and bring your own attempt or question back for coaching.
 
-5. In a second terminal, start the course-processing worker:
+- **Hands Off** gives observations and reflective questions.
+- **Coach** offers ideas and feedback, but not a complete answer.
+- **Tutor** can walk through steps. It gives a complete answer only when you explicitly ask.
 
-   ```sh
-   npm run worker:dev
-   ```
+Miva Buddy does not see your LeetCode editor, submissions, or results. Completion is your own check-in; opening a problem does not mark it complete. Saved sessions and recent activity help you continue where you left off in the same browser.
 
-Without the worker, the web app, direct Learn, and Practice run, but new notes/PDFs remain queued or fail safely until a worker is available. Use only synthetic course content with hosted AI services during development and evaluation.
+### When you’re preparing for an interview
 
-The optional Remote OK metadata-only pilot is development-only and off by default. Set `REMOTEOK_METADATA_PILOT=true` in ignored `.env.local` to enable a low-volume lookup from grounded Learn. It displays only role metadata, source tags, Remote OK attribution, and direct listing links; descriptions are not inspected or shown, responses are not cached or persisted, and production ignores the flag. The request cap is process-local and is not a production-wide quota.
+Ask about a company, role, or interview stage in the general Learn conversation. Miva Buddy can help with role-relevant topics, practice ideas, behavioral prompts, and a study plan based on what you told it.
 
-## Verify
+It also offers external searches for Hacker News and LeetCode Discuss. These links open searches for you; Miva Buddy does not fetch or verify candidate accounts. The preparation is general guidance, not a description of that company’s interview process.
+
+### When you’re connecting class to career preparation
+
+Grounded Learn may show a few related job listings when the course material supports a concrete skill and an eligible metadata source is available. The cards show listing details and links, not verified employer requirements. Miva Buddy does not inspect job descriptions to prove a skill match, and the lesson still works when listings are unavailable.
+
+## How the web app works
+
+The browser talks to the Next.js app. The app handles student requests, saved data, course retrieval, and calls to the configured AI provider. Longer course processing runs separately in a worker, rather than inside the web request.
+
+```mermaid
+flowchart LR
+  Browser[Student's browser] --> Web[Next.js web app]
+  Web <--> Supabase[Supabase\nAuth, database, private files]
+  Web --> Retrieval[Course retrieval]
+  Retrieval --> Supabase
+  Web --> AI[Generation provider]
+  Web --> Queue[Course-processing queue]
+  Queue --> Worker[Separate course worker]
+  Worker <--> Supabase
+  Worker --> Embeddings[Embedding provider]
+  Worker --> AI
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the system boundaries and implementation details.
+
+## Getting started
+
+### You’ll need
+
+- Node.js 20 or newer and npm.
+- A Supabase development project with anonymous sign-in enabled.
+- For course-material processing: PostgreSQL, the separate worker, and an embedding service. Ollama with `nomic-embed-text` is the supported local embedding option.
+
+Docker is not required. This is not an offline-only app: Supabase provides authentication and saved data.
+
+### Install and configure
+
+Install the locked dependencies:
+
+```sh
+npm ci
+```
+
+Create an ignored `.env.local` file in the repository root. These two values are required for the web app:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=<your-development-project-url>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-development-publishable-key>
+```
+
+Apply the SQL migrations in `drizzle/` to the development database in order. The [Supabase setup guide](docs/engineering/milestone-1-supabase-setup.md) and [deployment guide](docs/engineering/deployment-readiness.md) have more detail. Never commit `.env.local`, database URLs, or provider credentials.
+
+To queue and process course materials, also set a server-only `DATABASE_URL` and run the worker below. Local development defaults to fake AI and embeddings. For real model responses, choose a generation provider with `AI_PROVIDER` and configure its credentials—for example, `GEMINI_API_KEY` for Gemini—or use a reachable local Ollama service. For real course embeddings, set `EMBEDDING_PROVIDER=ollama`, `OLLAMA_BASE_URL`, and `OLLAMA_EMBEDDING_MODEL` (default: `nomic-embed-text`). The [provider decision](docs/engineering/ai-provider-decision.md) records the current evaluation and data-use caveats.
+
+The `REMOTEOK_METADATA_PILOT=true` and `HIMALAYAS_METADATA_ENABLED=true` flags are optional. They are not needed to run Miva Buddy. Remote OK remains development-only, and neither job source verifies requirements from descriptions.
+
+### Start the app
+
+In one terminal, run:
+
+```sh
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). A new browser identity starts at onboarding; no email or password is required.
+
+For course processing, start the worker in a second terminal:
+
+```sh
+npm run worker:dev
+```
+
+Without the worker, the app can still run, but new course materials will not finish processing.
+
+## Built with
+
+- Next.js App Router, React, TypeScript, and CSS.
+- Supabase anonymous Auth, PostgreSQL, and private file storage.
+- pg-boss for the course-processing queue.
+- PostgreSQL full-text search and `pgvector` for course retrieval.
+- Replaceable generation and embedding interfaces, with Gemini, Groq, and Ollama generation adapters and an Ollama embedding adapter.
+- Zod for validation, Vitest for unit tests, and Playwright for browser tests.
+
+## Repository map
+
+```text
+src/app/          Pages, server actions, and API routes
+src/components/   Learn, Practice, course, and shared UI
+src/contracts/    Validated request and response shapes
+src/server/       Retrieval, AI, evidence, persistence, and worker logic
+src/worker.ts     Separate course-processing worker
+drizzle/          Database migrations
+docs/             Product, architecture, engineering, and research docs
+tests/            Unit, integration, and browser tests
+```
+
+## Development checks
 
 ```sh
 npm run lint
@@ -43,16 +136,24 @@ npm run test:e2e
 npm run check:secrets
 ```
 
-Hosted Supabase browser tests are opt-in with `RUN_HOSTED_SUPABASE_TESTS=1 npm run test:e2e`; they create temporary anonymous users and synthetic records, so run them intentionally and allow cleanup to finish. The E2E suite starts its own local web server. Check configuration without revealing values with `npm run check:hosted-config`.
+The default browser suite runs locally. Hosted Supabase tests are opt-in with `RUN_HOSTED_SUPABASE_TESTS=1`; they create anonymous test identities and synthetic records, so run them only with a safe test-data plan. Hosted end-to-end coverage is incomplete, including the latest interview-search and mobile journey. Local checks are not the same as hosted release acceptance.
 
-## Current release limitations
+Optional checks include `npm run test:embeddings:ollama` for a local synthetic embedding check and `npm run test:ai-evals` for synthetic prompts sent to the configured hosted AI provider. `npm run check:hosted-config` reports configuration status without printing values.
 
-The Remote OK metadata-and-link pilot is approved for development, but M8's excerpt-backed skill-evidence acceptance remains incomplete. The synthetic industry preview is synthetic, unmistakably labeled, not persisted, and disabled in production. Do not present it as a real job posting or as skill evidence. Public release also requires a production-wide upstream quota, approved deployment provider, production Supabase and secret configuration, and a production-capable embedding service/worker topology. See [project status](docs/plans/project-status.md) and [deployment readiness](docs/engineering/deployment-readiness.md).
+## Current limitations
 
-## Project knowledge
+- Miva Buddy is a development prototype. No public deployment has occurred; production hosting, services, backups, monitoring, and abuse protection remain release work.
+- Job cards are related listings, not verified skill requirements. Interview links are external searches, not verified candidate accounts.
+- Browser voice input depends on speech-recognition support and permissions. The browser vendor may process speech; Miva Buddy does not store raw audio. Typing remains available.
+- Recent hosted interview E2E coverage has not completed. See [project status](docs/plans/project-status.md) for the remaining gaps and release gates.
 
-- [Agent operating guide](AGENTS.md)
+## Demo
+
+**Demo video:** _Coming soon._
+
+## Further reading
+
 - [Architecture](ARCHITECTURE.md)
-- [Approved MVP implementation plan](docs/plans/mvp-implementation-plan.md)
-- [Current milestone status](docs/plans/project-status.md)
-- Product, UX, and trust requirements in `docs/product/` and `docs/architecture/`
+- [Current project status](docs/plans/project-status.md)
+- [Local and production setup](docs/engineering/deployment-readiness.md)
+- [Product and student workflows](docs/product/product-specification.md)
