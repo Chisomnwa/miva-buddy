@@ -2,6 +2,8 @@
 
 ## 1. Product Direction
 
+> **Scope note:** This document defines the original MVP product baseline. It is not a complete inventory of later implementation refinements or a claim that every specified capability is available today. Current implementation, verification, and release limits are summarized in [`../plans/project-status.md`](../plans/project-status.md). The first public deployment is the V1 release milestone; internal implementation phases are not release versions.
+
 The project is a web first AI learning companion for university Computer Science and Software Engineering students, initially designed around Miva Open University students.
 
 It helps students understand course material and practise Data Structures and Algorithms with controlled AI guidance. While a student is learning from course material, the companion can also surface real job posting evidence when an explicitly mentioned skill or technology, such as SQL, Python, Docker, Git, AWS, or PostgreSQL, genuinely appears in industry evidence.
@@ -69,7 +71,7 @@ The product must not manufacture indirect mappings from DSA concepts such as arr
 
 Useful contextual actions may include Explain simply, Give an example, Check my understanding, and Practice this when the concept has a relevant DSA path.
 
-Voice may later be supported as another interaction method, but the complete experience must remain available through text.
+Optional browser-native voice input is now implemented for the general Learn composer; text remains fully supported. Recognition may use a browser-vendor service, and raw audio is not stored by Miva Buddy. See project status for verification limits.
 
 ### Practice
 
@@ -98,6 +100,8 @@ Its purpose is simple: when the student's course material explicitly mentions a 
 Connections must be supported by real job posting evidence from legitimate public sources. Retrieval supplies the evidence. AI may explain what the evidence means in the learning context. Software verifies that the displayed evidence supports the claimed term.
 
 The student may see the skill, a short explanation, the company and role, a relevant posting excerpt, and the original source. If sufficient evidence does not exist, nothing is forced.
+
+That excerpt-backed description is the original product target, not the current evidence capability. The implemented Remote OK and Himalayas paths are bounded metadata-only related-listing experiences; they do not verify employer skill requirements. Excerpt-backed real evidence remains blocked pending its source-approval and quality gates.
 
 Career interests may help rank which evidence is most relevant, but personalization must never manufacture a connection.
 

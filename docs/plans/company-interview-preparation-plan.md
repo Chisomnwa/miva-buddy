@@ -1,7 +1,9 @@
-# Phase 4A — Company Interview Preparation: Architecture and Implementation Plan
+# Company Interview Preparation: Architecture and Implementation Plan
 
-**State:** Phase 4A planning and Phase 4B.1 implementation/local verification complete. Phase 4B.2 user-directed external search links are implemented and locally verified. Hosted persistence verification remains opt-in.
+**State:** Architecture plan, general interview preparation, and user-directed external search links are implemented and locally verified. Hosted persistence verification remains opt-in. This is an internal development record, not a separate product release.
 **Scope:** A small extension to general Learn for attributable, anecdotal interview evidence and clearly labeled generic preparation. This is not an approval to retrieve or reuse third-party posts.
+
+**Current implementation boundary:** The shipped Learn flow recognizes interview intent, carries company/role/stage context, presents general preparation and user-directed HN/LeetCode Discuss searches, and labels the searches as unverified external results. It does not automatically retrieve or validate first-person accounts. The evidence-backed workflow described below remains a future design, not an implemented feature.
 
 ## Existing Web foundation
 
@@ -110,7 +112,7 @@ Phase 4B.2's metadata-only review did not clear this gate. User-directed search-
 
 ## Reviewed source material
 
-- Existing Web research: `docs/research/miva_buddy_evidence_research_handoff.md`, `docs/research/job-and-interview-evidence-integration-audit.md`, and `docs/plans/v2-company-interview-preparation-roadmap.md`.
+- Existing Web research: `docs/research/job-and-interview-evidence-research-handoff.md`, `docs/research/job-and-interview-evidence-integration-audit.md`, and `docs/plans/company-interview-evidence-roadmap.md`.
 - [Hacker News Search API](https://hn.algolia.com/api) documents search endpoints and a per-IP request limit; this does not grant rights to reuse indexed posts.
 - [Official Hacker News API](https://github.com/HackerNews/API) defines item IDs, author, HTML text, and creation timestamp; the timestamp is item creation, not an interview date.
 - [Hacker News Guidelines](https://news.ycombinator.com/newsguidelines.html) are community rules, not a content reuse license.

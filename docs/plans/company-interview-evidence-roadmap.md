@@ -1,8 +1,8 @@
-# V2 Roadmap: Company-Specific Interview Preparation
+# Company Interview Evidence Roadmap
 
-**Status:** Proposed post-MVP direction; not approved for implementation.
+**Status:** Future work; automated interview-evidence retrieval is not implemented or approved. General interview preparation and user-directed external search links are implemented and intended for the first public release, pending final testing.
 **Research reviewed:** October 8, 2026.
-**Scope:** Company-specific preparation grounded in first-hand interview accounts. This is separate from the approved MVP plan and does not change current product behavior or branding.
+**Scope:** A possible future capability for verified, attributable first-hand interview accounts. This roadmap is not a product release/version plan and does not authorize retrieval or reuse of third-party content.
 
 ## Product intent
 

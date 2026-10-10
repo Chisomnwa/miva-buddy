@@ -2,20 +2,19 @@
 
 ## Decision status
 
-**Gemini is the provisional hosted provider for Miva Buddy Milestone 2.** It is accessed through the provider-neutral `GenerationProvider` interface and a server-only OpenAI-compatible adapter. Both exact handoff model IDs passed the live Miva Buddy Direct Learn structured-output evaluation. This is a limited M2 evaluation, not final production approval: the two introductory explanations took about 38–40 seconds in the recorded full run, and intermittent provider timeouts/rejections occurred on earlier attempts. Keep Groq as a replaceable alternate, not the current provisional selection. Keep Ollama as the local option and the deterministic fake as the test adapter.
+**Gemini is the provisional hosted provider for Miva Buddy Milestone 2.** It is accessed through the provider-neutral `GenerationProvider` interface and a server-only OpenAI-compatible adapter. Both evaluated candidate model IDs passed the live Miva Buddy Direct Learn structured-output evaluation. This is a limited M2 evaluation, not final production approval: the two introductory explanations took about 38–40 seconds in the recorded full run, and intermittent provider timeouts/rejections occurred on earlier attempts. Keep Groq as a replaceable alternate, not the current provisional selection. Keep Ollama as the local option and the deterministic fake as the test adapter.
 
 The evidence is deliberately separated:
 
-- **Lilo reference evidence:** the supplied handoff reports that Qwen 2.5 Coder 7B failed Lilo's richer structured flows despite working as a natural-language model, while its exact Gemini setup succeeded in Lilo's structured workflows. These results are not Miva Buddy test results or product requirements. See [`../research/lilo-companion-testing-evidence.md`](../research/lilo-companion-testing-evidence.md).
-- **Miva Buddy direct-schema probe:** on October 7, 2026, local Ollama `qwen2.5-coder:7b` returned HTTP 200 and one synthetic binary-tree answer that passed Miva Buddy's current `{ answer, followUpQuestions }` schema (416 answer characters, three follow-ups, about 12.5 seconds). This only demonstrates a single simple Direct Learn response. It does not establish robustness across prompts, retries, or richer future product schemas, and does not erase the observed Lilo incompatibility.
+- **Miva Buddy direct-schema probe:** on October 7, 2026, local Ollama `qwen2.5-coder:7b` returned HTTP 200 and one synthetic binary-tree answer that passed Miva Buddy's current `{ answer, followUpQuestions }` schema (416 answer characters, three follow-ups, about 12.5 seconds). This only demonstrates a single simple Direct Learn response. It does not establish robustness across prompts, retries, or richer future product schemas.
 - **Gemini adapter contract tests:** the repository tests the Gemini adapter for both exact handoff IDs against the current Miva Buddy schema, request payload, strict structured-output declaration, and credential isolation using mocked HTTP responses. All 20 unit tests, lint, typecheck, and production build pass after this change; default E2E passes 6 tests and skips 6 hosted/configuration tests. These are adapter/unit tests, not live-model results.
 - **Live Gemini evaluations:** completed on October 7, 2026, using synthetic prompts only. Both exact models passed both Miva Buddy checks in the final full run. See recorded results below. The adapter does not currently expose token usage or cost, so cost was not measured. Earlier runs had intermittent timeouts/provider rejections; the final full run succeeded.
 
 ## Exact model candidates
 
-The handoff recorded these exact identifiers working in Lilo. Preserve them as supplied; do not silently substitute model aliases:
+These exact candidate identifiers were evaluated against Miva Buddy's own Direct Learn contract. Preserve them as recorded in this evaluation; do not silently substitute model aliases:
 
-| Lilo role | Observed identifier | Miva Buddy evaluation status |
+| Candidate role | Evaluated identifier | Miva Buddy evaluation status |
 |---|---|---|
 | Quick | `models/gemini-3.5-flash-lite` | Both live Miva Buddy checks passed; introductory-answer latency was about 40.2 seconds in the final full run |
 | Careful | `models/gemini-3.1-flash-lite` | Both live Miva Buddy checks passed; introductory-answer latency was about 37.8 seconds in the final full run |
@@ -24,9 +23,9 @@ Milestone 2 currently has one Direct Learn generation role, whose default `GEMIN
 
 ## Provider comparison and safeguards
 
-- **Gemini OpenAI-compatible API:** selected as the first hosted evaluation candidate because the supplied hands-on evidence reports successful Lilo structured workflows, both named models currently advertise structured-output capability, and Google's OpenAI-compatible guide documents chat completions and structured output. Miva Buddy still validates every response with Zod and must run its own live evaluations.
+- **Gemini OpenAI-compatible API:** selected as the first hosted evaluation candidate because Google's OpenAI-compatible guide documents chat completions and structured output, and both candidate models passed Miva Buddy's own live synthetic contract evaluation. Miva Buddy still validates every response with Zod; this limited Direct Learn result does not establish production suitability for every workflow.
 - **Important Gemini data-use distinction:** Google's current terms say prompts and responses from unpaid API use may be used to improve products and may be reviewed by humans; do not send real student data or sensitive information through unpaid service. Paid Gemini API service does not use prompts/responses to improve products, but limited abuse-monitoring logging may still occur. The Miva Buddy synthetic evaluation set contains no student data. Confirm billing tier and current terms before using real conversations. This privacy constraint is part of provider selection, not overridden by the fact that an API key exists.
-- **Ollama:** retains the local development boundary and sends prompts to the configured local service. The supplied handoff's Qwen/Lilo failure shows that endpoint connectivity and fluent prose do not establish structured-workflow compatibility. The one Miva Buddy Direct Learn probe passed only the current simple response schema. Test each model against each feature's actual schemas; do not claim universal compatibility.
+- **Ollama:** retains the local development boundary and sends prompts to the configured local service. Endpoint connectivity and fluent prose do not establish structured-workflow compatibility. The one Miva Buddy Direct Learn probe passed only the current simple response schema. Test each model against each feature's actual schemas; do not claim universal compatibility.
 - **Groq:** retain its adapter as an alternate. No Miva Buddy live evaluation has been completed for it. It is no longer the provisional hosted candidate.
 - **OpenAI API:** remains technically replaceable but is not part of the current M2 hosted evaluation.
 

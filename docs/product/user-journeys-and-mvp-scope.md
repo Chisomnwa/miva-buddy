@@ -1,5 +1,7 @@
 # Capstone User Journeys and MVP Scope
 
+> **Scope note:** The journeys and exclusions below record the original MVP baseline. Later implementation decisions are recorded in project status and feature plans; an item listed as out of scope here may have been implemented later without changing this historical baseline. The first public deployment is the V1 release milestone, not an internal development phase.
+
 ## 1. Purpose
 
 This document defines how students move through the product and draws the boundary around the first coherent version.
@@ -262,6 +264,7 @@ The first coherent version includes:
 - Contextual industry evidence inside Learn when uploaded material mentions a concrete job relevant skill or technology and credible job posting evidence exists
 
 The MVP does not include email/password signup or sign-in, email verification, password reset, SMTP, or cross-device account restoration. Proper user-facing account authentication may be considered after the MVP.
+
 - Traceable job evidence with role, company, relevant excerpt, and original source
 - Career interest based ranking of valid evidence
 - Returning student continuity
@@ -269,6 +272,8 @@ The MVP does not include email/password signup or sign-in, email verification, p
 - A hosted AI layer that does not require students to provide their own API key as the normal experience
 
 The exact model provider is an architecture and deployment decision rather than an MVP product decision.
+
+The original job-evidence journey above describes the desired excerpt-backed target. The current implementation exposes only limited metadata-only related listings and does not verify that an employer requires a lecture-derived skill. Company interview preparation is implemented as general guidance with user-directed external search links; external results are not retrieved or verified by Miva Buddy. See [`../plans/project-status.md`](../plans/project-status.md) for current state and release testing.
 
 ## 11. Explicitly Out of Scope
 

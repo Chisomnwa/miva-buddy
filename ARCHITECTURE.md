@@ -2,7 +2,7 @@
 
 ## Status
 
-This document records the approved architecture and distinguishes implemented capabilities from planned capabilities. M1–M6 are complete. M7 is in verification for the user-approved, development-only Remote OK metadata pilot; excerpts, caching, and production use remain out of scope. M8's excerpt-backed live-evidence acceptance remains blocked. The synthetic preview is development-only and remains clearly labeled. M9 integration and hardening are in progress.
+This document maps the implemented system and distinguishes it from planned capabilities. M1–M6 are complete. M7 remains in verification for limited metadata paths; description excerpts and production job-evidence use are not approved. M8's excerpt-backed live-evidence acceptance remains blocked. The synthetic preview is development-only and clearly labeled. M9 integration and hardening are in progress. The application has not been publicly deployed; the first public deployment is the V1 release milestone.
 
 As milestones are implemented, this document must evolve from a plan into a concise map of the actual codebase. Planned and implemented details must remain clearly distinguishable.
 
@@ -18,7 +18,7 @@ Both processes share application, persistence, provider, validation, and configu
 ### Implemented foundation (Milestone 1 complete)
 
 - Next.js 16 App Router, React, TypeScript, and responsive global styling are initialized.
-- `src/app` contains onboarding and protected workspace routes; the workspace currently has Learn, Practice, Home, and Profile shells, not their planned feature behavior.
+- `src/app` contains onboarding and protected workspace routes for Learn, Practice, Home, Courses, and Profile. Implemented behavior is mapped in the milestone sections below; production deployment and release gates remain separate.
 - Supabase anonymous Auth is the approved invisible identity mechanism. Onboarding remains public until submit; its server action creates an anonymous Supabase user only when needed and saves the profile under that user's ID. The existing SSR cookie integration and `src/proxy.ts` maintain the browser session. Hosted verification confirms same-browser persistence and profile editing.
 - `src/contracts/profile.ts` validates the profile fields and `src/server/persistence/schema.ts` plus `drizzle/0000_profiles.sql` define the initial profile schema and row-level security policies. The migration is applied; live checks confirm own-profile access and cross-user read/write isolation.
 - Unit tests, Playwright onboarding/profile/authorization/accessibility/responsive checks, ESLint, TypeScript, and production build are present. Hosted Auth integration checks are opt-in to avoid consuming the project's anonymous-sign-in rate limit. Their verified state is tracked in `docs/plans/project-status.md`.

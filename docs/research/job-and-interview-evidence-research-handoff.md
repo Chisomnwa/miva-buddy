@@ -5,6 +5,8 @@
 **Audience:** Miva Buddy Web project team / another development conversation
 **Status:** Research handoff, **not** approval to integrate or reuse third-party content.
 
+**Web-project context (2026-10-10):** This is historical research prepared for the separate Desktop codebase and is not Web production approval. Later Web implementation added only bounded metadata-only related job listings through limited Remote OK and opt-in Himalayas paths. These listings are not verified employer skill requirements; excerpt processing/display and production use remain restricted. See the Web integration audit and current project status for subsequent decisions.
+
 ## 1. Where the original research lives
 
 The source research was prepared for the **Miva Buddy Desktop** project, a separate codebase from Miva Buddy Web. Look in the desktop repository:

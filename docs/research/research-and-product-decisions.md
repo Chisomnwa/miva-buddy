@@ -80,11 +80,11 @@ LeetCode itself and return to Miva Buddy for coaching when they need
 help. Miva Buddy does not recreate the LeetCode editor or pretend to
 observe LeetCode activity that the student has not supplied.
 
-Hands-on reference-product observations are preserved separately in
-[`lilo-companion-testing-evidence.md`](lilo-companion-testing-evidence.md).
-That document records empirical Lilo behavior and model compatibility;
-it is evidence for future decisions, not a Miva Buddy specification or
-approval to adopt every observed feature or provider configuration.
+The principles above are product inspiration only. Miva Buddy's own
+requirements, implementation, and provider decisions are documented in
+the product, architecture, and engineering records. No Lilo behavior or
+provider result is treated as a Miva Buddy test or as approval to adopt
+another product's implementation.
 
 ## 3. Product Areas
 
@@ -323,10 +323,10 @@ docs/
 ├── research/
 │   └── research-and-product-decisions.md
 ├── product/
-│   ├── product_specification.md
-│   ├── user_journeys_and_mvp_scope.md
-│   ├── ux_specifications.md
-│   └── visual_design_system.md
+│   ├── product-specification.md
+│   ├── user-journeys-and-mvp-scope.md
+│   ├── ux-specifications.md
+│   └── visual-design-system.md
 ├── architecture/
 │   ├── architecture_requirements.md
 │   └── ai_retrieval_safeguards.md

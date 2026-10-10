@@ -4,10 +4,10 @@
 
 Read the documents relevant to the task before changing the repository. For product or implementation work, start with:
 
-1. `docs/product/product_specification.md`
-2. `docs/product/user_journeys_and_mvp_scope.md`
-3. `docs/product/ux_specifications.md`
-4. `docs/product/visual_design_system.md`
+1. `docs/product/product-specification.md`
+2. `docs/product/user-journeys-and-mvp-scope.md`
+3. `docs/product/ux-specifications.md`
+4. `docs/product/visual-design-system.md`
 5. `docs/architecture/architecture_requirements.md`
 6. `docs/architecture/ai_retrieval_safeguards.md`
 7. `ARCHITECTURE.md`
@@ -26,7 +26,7 @@ For M7/M8 work, also read `docs/engineering/milestone-7-job-evidence-source-eval
 
 For Milestone 9 work, also read `docs/engineering/milestone-9-integration-hardening.md` before changing global error/loading behavior, security headers, telemetry, deployment guidance, or final verification status.
 
-For V1 interface refinement, also read `docs/plans/v1-interface-refinement-plan.md`. Its approved Courses navigation update supersedes the older three-item UX diagrams without changing product trust boundaries.
+For interface refinement, also read `docs/plans/interface-refinement-plan.md`. Its approved Courses navigation update supersedes the older three-item UX diagrams without changing product trust boundaries. Internal refinement phases are development history, not product releases.
 
 Use `docs/research/research-and-product-decisions.md` for background and rationale.
 

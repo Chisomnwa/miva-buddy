@@ -1,8 +1,10 @@
-# V1 interface refinement plan
+# Interface refinement plan
 
 ## Scope and precedence
 
 This is a focused presentation pass after the MVP checkpoint. The current user-approved direction adds **Courses** to primary navigation, superseding the older three-item navigation examples in the UX and visual-design specifications. Product behavior, server-side ownership, retrieval, coaching ceilings, and job-evidence permission gates remain unchanged. This plan does not authorize a V1 release or resolve the M7/M8 release limitations.
+
+The numbered phases below are internal development stages, not product releases. The first public deployment is the V1 release milestone. This document records completed refinement scope; it is not a V1 release plan.
 
 The supplied `public/brand/miva-logo.png` is the source for the original Miva symbol. Show the symbol unaltered beside the Miva Buddy name; do not imply university endorsement. Keep navy/white as the dominant palette.
 

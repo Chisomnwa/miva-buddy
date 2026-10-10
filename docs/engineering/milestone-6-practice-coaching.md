@@ -6,7 +6,7 @@ Complete. M1–M5 are complete. The coaching contract, authenticated route, pers
 
 ## Authoritative behavior
 
-`docs/architecture/ai_retrieval_safeguards.md` §§17–23, `docs/product/ux_specifications.md` §§18–20, and Milestone 6 in `docs/plans/mvp-implementation-plan.md` are the source of truth.
+`docs/architecture/ai_retrieval_safeguards.md` §§17–23, `docs/product/ux-specifications.md` §§18–20, and Milestone 6 in `docs/plans/mvp-implementation-plan.md` are the source of truth.
 
 - Hands Off may observe the student's supplied attempt and ask a reflective question; it may not name the solution idea, give steps, pseudocode, or a solution.
 - Coach may name the idea and diagnose only supplied work; it may not provide the complete answer. An explicit full-answer request must not silently change the selected mode.

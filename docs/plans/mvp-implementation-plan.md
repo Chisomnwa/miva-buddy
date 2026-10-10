@@ -1,5 +1,7 @@
 # Miva Buddy MVP Implementation Plan
 
+> This plan records the original MVP engineering sequence and acceptance gates. Internal milestone/phase numbering is development history, not a product version. The first public deployment is the V1 release milestone; no V1 release plan is established here.
+
 ## Purpose and workflow
 
 This is the approved implementation plan for the Miva Buddy MVP. Milestones are coherent vertical slices with explicit verification gates. Current progress is maintained in `project-status.md`.

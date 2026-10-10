@@ -102,7 +102,7 @@ to use the product.
 
 ## 3. Information Architecture
 
-V1 interface refinement update: Courses is now a first-class primary navigation item on desktop and mobile. The earlier three-item navigation diagrams and the navigation bullet in Section 30 document the pre-refinement baseline; use Home, Learn, Courses, Practice, with Profile/Settings separate. This change does not add an Industry destination or change the course/learning flows. See `docs/plans/v1-interface-refinement-plan.md`.
+Accepted interface refinement: Courses is a first-class primary navigation item on desktop and mobile. The earlier three-item navigation diagrams and the navigation bullet in Section 30 document the pre-refinement baseline; use Home, Learn, Courses, Practice, with Profile/Settings separate. This change does not add an Industry destination or change the course/learning flows. Internal refinement work is not a product release. See `../plans/interface-refinement-plan.md`.
 
 The primary navigation is deliberately small:
 

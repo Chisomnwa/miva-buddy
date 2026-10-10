@@ -390,9 +390,9 @@ Retrieval failure does not mean that no evidence exists.
 
 An elaborate scheduled job-monitoring system is not required for the MVP.
 
-## 17. Practice Coaching Uses the Lilo Reference Behavior
+## 17. Miva Buddy Practice Coaching Policy
 
-The Practice coaching policy should adopt the behavior documented by Lilo Companion rather than an invented numerical hint ladder.
+Practice coaching uses explicit assistance ceilings. The student chooses the mode, and the application must not silently exceed it.
 
 The modes are:
 
@@ -406,13 +406,9 @@ Tutor may therefore provide the answer only when the student explicitly asks for
 
 The application should preserve the principle that the student chooses the assistance ceiling and the system does not silently exceed it.
 
-## 18. Progressive and Earned Assistance
+## 18. Student-Supplied Context and Progressive Assistance
 
-Following the Lilo reference behavior, proactively offered help should be earned progressively rather than jumping directly to stronger assistance.
-
-In Lilo, an offered hint progresses one grade at a time, no more than once a minute, and only after the student's code changes.
-
-Our web-first MVP does not have Lilo's Chrome extension and therefore cannot automatically observe the student's LeetCode editor or run verdicts.
+Miva Buddy does not automatically observe the student's LeetCode editor or run verdicts. Any future proactive assistance must be based on context the student supplies and must remain within the selected mode's ceiling. The current product does not implement a timed hint ladder or automatic editor-change detection.
 
 The product should preserve the coaching policy while adapting the observation mechanism honestly.
 
@@ -481,7 +477,7 @@ Show     Reject
 
 The gate should reject assistance that exceeds the selected mode.
 
-Following the Lilo reference behavior, it should also reject a hint that claims to reference a line or variable that does not exist in the student's supplied code.
+It should also reject a hint that claims to reference a line or variable that does not exist in the student's supplied code.
 
 A rejected hint may be retried once under a stricter instruction. If it still fails, it should be dropped rather than shown.
 

@@ -4,7 +4,7 @@
 
 The application builds as a Node.js Next.js server plus a separate PostgreSQL-backed material worker. Development uses hosted Supabase and can use local Ollama. No production host, production Supabase project, or production embedding endpoint has been selected or verified. No deployment was performed.
 
-The approved Remote OK integration is a development-only metadata-and-direct-link pilot, not a production integration. M8's excerpt-backed acceptance remains blocked; synthetic preview is clearly labeled, not persisted, and disabled by the server in production. Keep excerpts, caching, persistence, and production job retrieval/display disabled unless their specific permissions and operational controls are established.
+Remote OK remains a bounded, development-only metadata-and-direct-link pilot. A separate opt-in Himalayas path can return limited, attributed metadata-only related listings under freshness and per-listing validation; it does not inspect job descriptions to verify skill requirements and is not production-approved. Neither path establishes that an employer requires a lecture-derived skill. M8's excerpt-backed acceptance remains blocked; the synthetic preview is clearly labeled, not persisted, and disabled by the server in production. Keep description use, excerpts, caching, persistence, and production job retrieval/display disabled unless the specific permission and operational gates are established.
 
 ## Runtime topology
 
@@ -61,9 +61,9 @@ Do not pass a Supabase service-role key to the browser. The current repository d
 
 The following prevent a fully live public MVP release; no source permission outreach is being requested in this development phase:
 
-1. Only Remote OK metadata/direct-link display is approved for the opt-in development pilot. Do not enable its retrieval in production, cache or persist its results, or display description excerpts. M8's excerpt-backed evidence acceptance remains blocked.
+1. Remote OK is limited to its development-only metadata/direct-link pilot. Himalayas is a separate opt-in, metadata-only related-listing path with strict feed and listing freshness checks. Neither is production-approved or verifies job-description skill requirements. Do not use descriptions, display excerpts, or cache/persist results. M8's excerpt-backed evidence acceptance remains blocked.
 2. A deployment provider and production domain have not been selected. The choice must support a Node.js web server and a separately supervised long-running worker, private environment variables, and outbound PostgreSQL/Ollama connectivity.
 3. A production-capable embedding topology must be chosen. Today the implemented course-processing path uses Ollama; the worker needs a private service endpoint with `nomic-embed-text` loaded, or a separately designed/evaluated hosted adapter.
 4. Production Supabase Auth abuse protection, backups/PITR, provider budgets, monitoring, and retention/deletion operations must be configured and verified.
 
-Until these gates are resolved, describe the app as a development prototype, not a public live MVP. Do not report M9 or the definition of MVP as complete solely because the code builds or the development Supabase checks pass.
+General company interview preparation and user-directed Hacker News/LeetCode Discuss search links are implemented and intended for the first public release, pending final testing. The links are external searches, not verified candidate accounts; automated retrieval is unavailable. No public deployment has occurred. Until the release and operational gates above are resolved, describe the app as a development prototype, not a publicly deployed product. Do not report M9 or the MVP as complete solely because the code builds or development Supabase checks pass.
