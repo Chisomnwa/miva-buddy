@@ -12,7 +12,7 @@ test("unknown routes give a safe recovery path and app responses include baselin
   expect(headers["x-content-type-options"]).toBe("nosniff");
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
-  expect(headers["permissions-policy"]).toBe("camera=(), microphone=(), geolocation=()");
+  expect(headers["permissions-policy"]).toBe("camera=(), microphone=(self), geolocation=()");
   expect(headers["cross-origin-opener-policy"]).toBe("same-origin");
   expect(headers["x-powered-by"]).toBeUndefined();
 });
