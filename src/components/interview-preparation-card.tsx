@@ -100,10 +100,12 @@ export function InterviewPreparationCard({ value, id = "standalone" }: { value: 
         </div>}
         {searchLinks && <section className="interview-external-searches" aria-labelledby={`${titleId}-searches`}>
           <h3 id={`${titleId}-searches`}>Explore interview experiences</h3>
-          <p>Open an external search for discussions about this company and role.</p>
+          <p>These open external Google searches, not verified candidate accounts. Recent filters page dates, not interview dates; some companies may have no recent results.</p>
           <ul>
-            <li><a href={searchLinks.hackerNews} target="_blank" rel="noopener noreferrer">Search Hacker News discussions (external)</a></li>
-            <li><a href={searchLinks.leetCodeDiscuss} target="_blank" rel="noopener noreferrer">Search LeetCode Discuss (external)</a></li>
+            <li><a href={searchLinks.hackerNewsRecent} target="_blank" rel="noopener noreferrer">Search Hacker News — past 24 months (external)</a></li>
+            <li><a href={searchLinks.hackerNewsAllDates} target="_blank" rel="noopener noreferrer">Search Hacker News — all dates (external)</a></li>
+            <li><a href={searchLinks.leetCodeDiscussRecent} target="_blank" rel="noopener noreferrer">Search LeetCode Discuss — past 24 months (external)</a></li>
+            <li><a href={searchLinks.leetCodeDiscussAllDates} target="_blank" rel="noopener noreferrer">Search LeetCode Discuss — all dates (external)</a></li>
           </ul>
         </section>}
         <section className="interview-guidance-block" aria-labelledby={`${titleId}-guidance`}>

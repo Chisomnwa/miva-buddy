@@ -177,21 +177,19 @@ test("profile submission creates a browser identity, persists, and remains isola
   await expandDisclosure.focus();
   await expandDisclosure.press("Enter");
   await expect(page.getByRole("heading", { name: "Topics to review" })).toBeVisible();
-  const hackerNewsSearch = page.getByRole("link", { name: "Search Hacker News discussions (external)" });
-  const leetCodeSearch = page.getByRole("link", { name: "Search LeetCode Discuss (external)" });
-  await expect(hackerNewsSearch).toHaveAttribute("target", "_blank");
-  await expect(hackerNewsSearch).toHaveAttribute("rel", "noopener noreferrer");
-  await expect(leetCodeSearch).toHaveAttribute("target", "_blank");
-  await expect(leetCodeSearch).toHaveAttribute("rel", "noopener noreferrer");
-  const hnQuery = new URL(await hackerNewsSearch.getAttribute("href") ?? "").searchParams.get("q");
-  const leetCodeQuery = new URL(await leetCodeSearch.getAttribute("href") ?? "").searchParams.get("q");
-  expect(hnQuery).toContain("site:news.ycombinator.com/item");
-  expect(hnQuery).toContain("Coinbase");
-  expect(hnQuery).toContain("software engineering internship");
-  expect(leetCodeQuery).toContain("site:leetcode.com/discuss");
-  expect(leetCodeQuery).toContain("Coinbase");
-  expect(leetCodeQuery).toContain("software engineering internship");
-  await expect(page.getByText("Open an external search for discussions about this company and role.")).toBeVisible();
+  const searchLinks = page.getByRole("link", { name: /Search (Hacker News|LeetCode Discuss) — (past 24 months|all dates) \(external\)/ });
+  await expect(searchLinks).toHaveCount(4);
+  for (const link of await searchLinks.all()) {
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    const query = new URL(await link.getAttribute("href") ?? "").searchParams.get("q") ?? "";
+    expect(query).toContain("Coinbase");
+    expect(query).toContain("software engineering internship");
+    expect(query).toMatch(/site:(?:news\.ycombinator\.com\/item|leetcode\.com\/discuss)/);
+    if ((await link.innerText()).includes("past 24 months")) expect(query).toMatch(/after:\d{4}-\d{2}-\d{2}/);
+    else expect(query).not.toMatch(/\b(?:after|before):/);
+  }
+  await expect(page.getByText(/These open external Google searches, not verified candidate accounts/)).toBeVisible();
   await expect(page.getByText(/Coinbase.{0,40}(?:uses|asks|has|includes)/i)).toHaveCount(0);
   const interviewConversationUrl = page.url();
   await page.reload();
@@ -200,8 +198,8 @@ test("profile submission creates a browser identity, persists, and remains isola
   await expect(page.locator(".interview-preparation-context")).toContainText("Company: Coinbase");
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(hackerNewsSearch).toBeVisible();
-  await expect(leetCodeSearch).toBeVisible();
+  await expect(searchLinks).toHaveCount(4);
+  for (const link of await searchLinks.all()) await expect(link).toBeVisible();
   expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(390);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
