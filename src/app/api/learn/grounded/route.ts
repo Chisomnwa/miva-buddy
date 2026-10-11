@@ -198,7 +198,7 @@ export async function POST(request: Request) {
   }
   const himalayasReferences = await searchCourseHimalayasReferences(
     evidence,
-    isHimalayasMetadataEnabled(process.env.HIMALAYAS_METADATA_ENABLED),
+    isHimalayasMetadataEnabled(process.env.NODE_ENV, process.env.HIMALAYAS_METADATA_ENABLED),
     himalayasProvider,
     signal,
   );

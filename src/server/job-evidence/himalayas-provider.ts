@@ -47,8 +47,8 @@ export const himalayasMetadataGrant: EvidenceUseGrant = Object.freeze({
   cache: "unclear",
 });
 
-export function isHimalayasMetadataEnabled(flag: string | undefined): boolean {
-  return flag === "true";
+export function isHimalayasMetadataEnabled(nodeEnvironment: string | undefined, flag: string | undefined): boolean {
+  return nodeEnvironment === "development" && flag === "true";
 }
 
 type ProviderOptions = {

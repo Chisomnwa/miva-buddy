@@ -152,9 +152,18 @@ describe("Himalayas metadata-only API adapter", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("requires an explicit feature flag", () => {
-    expect(isHimalayasMetadataEnabled(undefined)).toBe(false);
-    expect(isHimalayasMetadataEnabled("false")).toBe(false);
-    expect(isHimalayasMetadataEnabled("true")).toBe(true);
-  });
+  it.each([
+    ["development", "true", true],
+    ["development", "false", false],
+    ["development", undefined, false],
+    ["production", "true", false],
+    ["production", "false", false],
+    ["test", "true", false],
+    ["test", "false", false],
+    [undefined, "true", false],
+    [undefined, undefined, false],
+  ] as const)("enables the metadata pilot only for development with an explicit flag (%s, %s)",
+    (nodeEnvironment, flag, expected) => {
+      expect(isHimalayasMetadataEnabled(nodeEnvironment, flag)).toBe(expected);
+    });
 });
