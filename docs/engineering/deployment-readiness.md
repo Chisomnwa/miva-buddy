@@ -6,6 +6,8 @@ The application builds as a Node.js Next.js server plus a separate PostgreSQL-ba
 
 Remote OK remains a bounded, development-only metadata-and-direct-link pilot. A separate opt-in Himalayas path can return limited, attributed metadata-only related listings under freshness and per-listing validation; it does not inspect job descriptions to verify skill requirements and is not production-approved. Neither path establishes that an employer requires a lecture-derived skill. M8's excerpt-backed acceptance remains blocked; the synthetic preview is clearly labeled, not persisted, and disabled by the server in production. Keep description use, excerpts, caching, persistence, and production job retrieval/display disabled unless the specific permission and operational gates are established.
 
+A private PostgreSQL daily reservation mechanism is implemented for Remote OK as a future safeguard: one atomic reservation per attempted upstream request, capped at four per UTC day across web instances, with fail-closed behavior. On 2026-10-11, the hardened hosted integration suite applied and tested the migration in the separate Miva Buddy Test Supabase project; all six integration tests passed. That project and its reusable test infrastructure are retained. The migration has not been applied to the main Miva Buddy (Website) Supabase project or a production database. The Learn route still requires `NODE_ENV=development` and `REMOTEOK_METADATA_PILOT=true`; this counter does not activate production retrieval or grant source approval. Any future production use requires separate source approval and deployment decisions, applying/verifying the migration in the approved production database, confirming the server-only `DATABASE_URL` role can execute the function while student-facing Supabase roles cannot access the table/function, and completing the relevant production checks. The existing 60-second spacing check remains process-local, not global.
+
 ## Runtime topology
 
 Production needs two long-running Node-compatible processes:
@@ -40,7 +42,7 @@ Do not pass a Supabase service-role key to the browser. The current repository d
 - Use a dedicated production Supabase project, separate from development and tests.
 - Enable anonymous sign-in and global signup; keep the `course-materials` bucket private.
 - Confirm RLS and Storage policies are enabled for every owner-scoped table and object operation.
-- Apply the reviewed migrations `0000_profiles.sql` through `0007_practice_coaching.sql` in order. For an existing database, first verify migration-history state; do not rerun raw SQL or write a migration baseline blindly.
+- Apply reviewed migrations `0000_profiles.sql` through `0008_expand_practice_topics.sql` in order. Apply `0009_remoteok_request_budget.sql` only if the shared Remote OK safeguard is part of the approved deployment configuration. For an existing database, first verify migration-history state; do not rerun raw SQL or write a migration baseline blindly. Do not enable Remote OK in production under the current feature gate or without a separate source-approval decision.
 - Configure a PostgreSQL connection compatible with both web requests and the worker's pg-boss session/notification behavior. Validate pool size against the selected host and Supabase plan.
 - Test signup, profile persistence, Storage access, migrations, RLS isolation, worker retry, and cleanup using synthetic identities/content before accepting student data.
 - Configure backups/PITR and verify recovery before production use.
