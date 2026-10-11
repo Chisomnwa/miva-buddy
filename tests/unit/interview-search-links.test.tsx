@@ -7,20 +7,15 @@ import { buildInterviewPreparation } from "@/server/interview-preparation/prepar
 describe("user-directed interview searches", () => {
   const testDate = new Date("2026-10-11T12:00:00.000Z");
 
-  it("builds recent and all-dates company-only searches", () => {
+  it("builds recent company-only searches for both sources", () => {
     const links = buildInterviewSearchLinks("Coinbase", null, testDate);
     expect(links).not.toBeNull();
     const hnRecent = new URL(links!.hackerNewsRecent);
-    const hnAll = new URL(links!.hackerNewsAllDates);
     const leetRecent = new URL(links!.leetCodeDiscussRecent);
-    const leetAll = new URL(links!.leetCodeDiscussAllDates);
     expect(hnRecent.origin).toBe("https://www.google.com");
     expect(hnRecent.searchParams.get("q")).toBe('site:news.ycombinator.com/item "Coinbase" interview after:2024-10-11');
     expect(leetRecent.searchParams.get("q")).toBe('site:leetcode.com/discuss "Coinbase" interview experience after:2024-10-11');
-    expect(hnAll.searchParams.get("q")).toBe('site:news.ycombinator.com/item "Coinbase" interview');
-    expect(leetAll.searchParams.get("q")).toBe('site:leetcode.com/discuss "Coinbase" interview experience');
-    expect(hnAll.searchParams.get("q")).not.toMatch(/\b(?:after|before):/);
-    expect(leetAll.searchParams.get("q")).not.toMatch(/\b(?:after|before):/);
+    expect(Object.keys(links!)).toEqual(["hackerNewsRecent", "leetCodeDiscussRecent"]);
   });
 
   it("calculates a rolling 24-month cutoff and clamps leap-day arithmetic", () => {
@@ -48,16 +43,15 @@ describe("user-directed interview searches", () => {
     expect(buildInterviewSearchLinks("x".repeat(121), null, testDate)).toBeNull();
   });
 
-  it("renders four external search choices with concise date and evidence context", () => {
+  it("renders only two recent external searches with concise evidence context", () => {
     const prep = buildInterviewPreparation({ message: "Prepare for a backend engineer interview at Coinbase." });
     const html = renderToStaticMarkup(<InterviewPreparationCard value={prep} id="sample" />);
     expect(html).toContain("Explore interview experiences");
     expect(html).toContain('rel="noopener noreferrer"');
     expect(html).toContain('target="_blank"');
     expect(html).toContain("Search Hacker News — past 24 months (external)");
-    expect(html).toContain("Search Hacker News — all dates (external)");
     expect(html).toContain("Search LeetCode Discuss — past 24 months (external)");
-    expect(html).toContain("Search LeetCode Discuss — all dates (external)");
+    expect(html).not.toContain("all dates");
     expect(html).toContain("General interview preparation</h2>");
     expect(html).toContain("These open external Google searches, not verified candidate accounts.");
     expect(html).toContain("Recent filters page dates, not interview dates; some companies may have no recent results.");
@@ -65,7 +59,7 @@ describe("user-directed interview searches", () => {
     expect(html).not.toContain("leetcode.com/discuss/post/");
   });
 
-  it("includes company and follow-up role in both recent and all-dates searches", () => {
+  it("includes company and follow-up role in both recent searches", () => {
     const firstTurn = buildInterviewPreparation({ message: "I have an onsite interview at Coinbase." });
     const followUp = buildInterviewPreparation({
       message: "It's a software engineering internship role.",
@@ -74,8 +68,8 @@ describe("user-directed interview searches", () => {
     const html = renderToStaticMarkup(<InterviewPreparationCard value={followUp} id="coinbase-follow-up" />);
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]!.replaceAll("&amp;", "&"));
     const queries = hrefs.map((href) => new URL(href).searchParams.get("q") ?? "");
-    expect(queries).toHaveLength(4);
-    expect(queries.filter((query) => query.includes("after:"))).toHaveLength(2);
+    expect(queries).toHaveLength(2);
+    expect(queries.every((query) => query.includes("after:"))).toBe(true);
     expect(queries.every((query) => query.includes('"Coinbase"') && query.includes('"software engineering internship"'))).toBe(true);
   });
 

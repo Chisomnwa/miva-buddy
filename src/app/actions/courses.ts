@@ -3,10 +3,12 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { courseInputSchema, materialNotesInputSchema, MAX_PDF_BYTES } from "@/contracts/course-material";
+import { courseInputSchema, materialNotesInputSchema, pdfFileMetadataError } from "@/contracts/course-material";
 import { createClient } from "@/lib/supabase/server";
 import { getDatabasePool } from "@/server/persistence/pool";
 import { enqueueMaterialProcessing } from "@/server/queue/material-jobs";
+import { PdfMaterialError, validatePdfPageCount } from "@/server/ingestion/pdf-extraction";
+import { removeFailedMaterial } from "@/server/courses/remove-failed-material";
 
 export type CourseFormResult = { error: string | null };
 
@@ -78,14 +80,28 @@ export async function uploadPdfAction(_previous: CourseFormResult, data: FormDat
   const courseId = formString(data, "courseId");
   const title = formString(data, "title").trim();
   const file = data.get("file");
-  if (!/^[0-9a-f-]{36}$/i.test(courseId) || title.length < 1 || title.length > 180
-    || !(file instanceof File) || file.size < 8 || file.size > MAX_PDF_BYTES || !file.name.toLowerCase().endsWith(".pdf")) {
-    return { error: "Choose a PDF up to 10 MB and enter a title." };
+  if (!/^[0-9a-f-]{36}$/i.test(courseId) || title.length < 1 || title.length > 180 || !(file instanceof File)) {
+    return { error: "Choose a PDF up to 10 MiB, within the 120-page limit, and enter a title." };
   }
+  const metadataError = pdfFileMetadataError(file);
+  if (metadataError) return { error: metadataError };
   const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
   if (new TextDecoder().decode(header) !== "%PDF-") return { error: "This file doesn't appear to be a valid PDF." };
   const { supabase, user } = await currentUser();
   if (!user) return { error: "Your session expired. Refresh the page and try again." };
+  let pdfBytes: Uint8Array;
+  try {
+    pdfBytes = new Uint8Array(await file.arrayBuffer());
+    await validatePdfPageCount(pdfBytes);
+  } catch (error) {
+    if (error instanceof PdfMaterialError && error.code === "too_many_pages") {
+      return { error: "This PDF has more than the supported 120 pages. Choose a shorter PDF." };
+    }
+    if (error instanceof PdfMaterialError && error.code === "file_too_large") {
+      return { error: "This PDF is larger than the 10 MiB limit." };
+    }
+    return { error: "This PDF could not be read. Choose a valid PDF or paste your notes instead." };
+  }
   const materialId = randomUUID();
   const safeName = `${materialId}.pdf`;
   const storagePath = `${user.id}/${courseId}/${materialId}/${safeName}`;
@@ -120,6 +136,32 @@ export async function uploadPdfAction(_previous: CourseFormResult, data: FormDat
   }
   revalidatePath(`/courses/${courseId}`);
   redirect(`/courses/${courseId}`);
+}
+
+export async function removeFailedMaterialAction(_previous: CourseFormResult, data: FormData): Promise<CourseFormResult> {
+  const courseId = formString(data, "courseId");
+  const materialId = formString(data, "materialId");
+  if (!/^[0-9a-f-]{36}$/i.test(courseId) || !/^[0-9a-f-]{36}$/i.test(materialId)) {
+    return { error: "This failed material could not be removed. Refresh and try again." };
+  }
+  const { supabase, user } = await currentUser();
+  if (!user) return { error: "Your session expired. Refresh and try again." };
+
+  const result = await removeFailedMaterial(getDatabasePool(), { courseId, materialId, userId: user.id }, async (path) => {
+    const { error } = await supabase.storage.from("course-materials").remove([path]);
+    return !error;
+  });
+  if (result === "removed") {
+    revalidatePath(`/courses/${courseId}`);
+    redirect(`/courses/${courseId}`);
+  }
+  if (result === "not_found") return { error: "This material is no longer failed and cannot be removed." };
+  if (result === "storage_failed") return { error: "We couldn't remove the private PDF, so its material card was kept. Please try again." };
+  if (result === "partial_failure") {
+    revalidatePath(`/courses/${courseId}`);
+    return { error: "The PDF may have been removed, but its material card could not be cleared. Please retry removal." };
+  }
+  return { error: "We couldn't remove this failed material. No other course materials were changed." };
 }
 
 export async function retryMaterialAction(_previous: CourseFormResult, data: FormData): Promise<CourseFormResult> {

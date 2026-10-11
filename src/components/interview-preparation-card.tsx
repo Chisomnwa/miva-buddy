@@ -103,9 +103,7 @@ export function InterviewPreparationCard({ value, id = "standalone" }: { value: 
           <p>These open external Google searches, not verified candidate accounts. Recent filters page dates, not interview dates; some companies may have no recent results.</p>
           <ul>
             <li><a href={searchLinks.hackerNewsRecent} target="_blank" rel="noopener noreferrer">Search Hacker News — past 24 months (external)</a></li>
-            <li><a href={searchLinks.hackerNewsAllDates} target="_blank" rel="noopener noreferrer">Search Hacker News — all dates (external)</a></li>
             <li><a href={searchLinks.leetCodeDiscussRecent} target="_blank" rel="noopener noreferrer">Search LeetCode Discuss — past 24 months (external)</a></li>
-            <li><a href={searchLinks.leetCodeDiscussAllDates} target="_blank" rel="noopener noreferrer">Search LeetCode Discuss — all dates (external)</a></li>
           </ul>
         </section>}
         <section className="interview-guidance-block" aria-labelledby={`${titleId}-guidance`}>

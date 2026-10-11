@@ -11,6 +11,25 @@ export class PdfMaterialError extends Error {
   }
 }
 
+/** Parse only the document structure so uploads over the page limit can be rejected before persistence. */
+export async function validatePdfPageCount(bytes: Uint8Array): Promise<number> {
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_PDF_BYTES) {
+    throw new PdfMaterialError("file_too_large");
+  }
+
+  const loading = getDocument({ data: bytes, useSystemFonts: true });
+  try {
+    const document = await loading.promise;
+    if (document.numPages > MAX_PDF_PAGES) throw new PdfMaterialError("too_many_pages");
+    return document.numPages;
+  } catch (error) {
+    if (error instanceof PdfMaterialError) throw error;
+    throw new PdfMaterialError("unreadable_pdf");
+  } finally {
+    await loading.destroy().catch(() => {});
+  }
+}
+
 export async function extractPdfPages(bytes: Uint8Array): Promise<PageText[]> {
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_PDF_BYTES) {
     throw new PdfMaterialError("file_too_large");

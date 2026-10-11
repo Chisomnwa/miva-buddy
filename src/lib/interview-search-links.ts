@@ -1,8 +1,6 @@
 export type InterviewSearchLinks = {
   hackerNewsRecent: string;
-  hackerNewsAllDates: string;
   leetCodeDiscussRecent: string;
-  leetCodeDiscussAllDates: string;
 };
 
 function normalizedPhrase(value: string | null, maxLength: number) {
@@ -33,8 +31,6 @@ export function buildInterviewSearchLinks(company: string | null, roleTitle: str
   const recentDateFilter = `after:${cutoffDate(now)}`;
   return {
     hackerNewsRecent: searchUrl(`site:news.ycombinator.com/item ${terms} interview ${recentDateFilter}`),
-    hackerNewsAllDates: searchUrl(`site:news.ycombinator.com/item ${terms} interview`),
     leetCodeDiscussRecent: searchUrl(`site:leetcode.com/discuss ${terms} interview experience ${recentDateFilter}`),
-    leetCodeDiscussAllDates: searchUrl(`site:leetcode.com/discuss ${terms} interview experience`),
   };
 }

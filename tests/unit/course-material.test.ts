@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { chunkMaterialPages } from "@/server/ingestion/chunking";
-import { extractPdfPages, PdfMaterialError } from "@/server/ingestion/pdf-extraction";
-import { MAX_PDF_BYTES, courseInputSchema, materialNotesInputSchema } from "@/contracts/course-material";
+import { extractPdfPages, PdfMaterialError, validatePdfPageCount } from "@/server/ingestion/pdf-extraction";
+import { MAX_PDF_BYTES, courseInputSchema, materialNotesInputSchema, pdfFileMetadataError } from "@/contracts/course-material";
 
 function makeTextPdf(text: string) {
   return makePdfPages([text]);
@@ -59,6 +59,13 @@ function makeImageOnlyPdf() {
 }
 
 describe("course material contracts and source-preserving preparation", () => {
+  it("validates PDF file type and size metadata for immediate feedback", () => {
+    expect(pdfFileMetadataError({ name: "lecture.pdf", size: 100, type: "application/pdf" })).toBeNull();
+    expect(pdfFileMetadataError({ name: "lecture.txt", size: 100, type: "text/plain" })).toContain("PDF file");
+    expect(pdfFileMetadataError({ name: "lecture.pdf", size: 100, type: "image/png" })).toContain("PDF file");
+    expect(pdfFileMetadataError({ name: "lecture.pdf", size: MAX_PDF_BYTES + 1, type: "application/pdf" })).toContain("10 MiB");
+  });
+
   it("normalizes and validates course fields", () => {
     expect(courseInputSchema.parse({ title: "  Data Structures  ", courseCode: " CSC 201 " }))
       .toEqual({ title: "Data Structures", courseCode: "CSC 201" });
@@ -82,6 +89,13 @@ describe("course material contracts and source-preserving preparation", () => {
     expect(pages).toHaveLength(1);
     expect(pages[0]).toMatchObject({ pageNumber: 1 });
     expect(pages[0].content).toContain("base case");
+  });
+
+  it("accepts the page limit and rejects the next page before material persistence", async () => {
+    expect(await validatePdfPageCount(makePdfPages(Array.from({ length: 120 }, (_, index) => `Page ${index + 1} content.`))))
+      .toBe(120);
+    await expect(validatePdfPageCount(makePdfPages(Array.from({ length: 121 }, (_, index) => `Page ${index + 1} content.`))))
+      .rejects.toMatchObject({ code: "too_many_pages" });
   });
 
   it("preserves two-page provenance and extracts text drawn in separate columns", async () => {

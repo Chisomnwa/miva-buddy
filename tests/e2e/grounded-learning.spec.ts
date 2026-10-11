@@ -121,6 +121,20 @@ test("a grounded Learn answer cites and opens its owned source, then restores th
   let pool: Pool | undefined;
   let userId: string | undefined;
   try {
+    await page.addInitScript(`
+      (() => {
+        class MockSpeechRecognition {
+          onstart = null; onresult = null; onend = null; onerror = null;
+          start() { this.onstart?.(); }
+          stop() {
+            this.onresult?.({ results: [{ isFinal: true, 0: { transcript: "spoken course follow-up" } }] });
+            this.onend?.();
+          }
+          abort() {}
+        }
+        window.SpeechRecognition = MockSpeechRecognition;
+      })();
+    `);
     await page.goto("/onboarding");
     await page.getByLabel("What are you studying?").selectOption("Computer Science");
     await page.getByLabel("What level are you currently in?").selectOption("200 Level");
@@ -134,6 +148,13 @@ test("a grounded Learn answer cites and opens its owned source, then restores th
     await expect(page.getByRole("heading", { name: "Binary Search Tree Structure" })).toBeVisible();
     await page.waitForLoadState("networkidle");
     const composer = page.getByLabel("Ask about this concept");
+    await composer.fill("Keep this typed draft");
+    await page.getByRole("button", { name: "Start voice input" }).click();
+    await expect(page.getByRole("button", { name: "Stop voice input" })).toBeVisible();
+    await page.getByRole("button", { name: "Stop voice input" }).click();
+    await expect(composer).toHaveValue("Keep this typed draft spoken course follow-up");
+    await expect(page.getByText("Transcription added. Review or edit it before sending.")).toBeVisible();
+    await expect(page).not.toHaveURL(/conversationId=/);
     await composer.fill(question);
     await expect(composer).toHaveValue(question);
     const send = page.getByRole("button", { name: "Send" });

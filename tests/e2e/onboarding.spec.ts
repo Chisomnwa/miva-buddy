@@ -177,8 +177,8 @@ test("profile submission creates a browser identity, persists, and remains isola
   await expandDisclosure.focus();
   await expandDisclosure.press("Enter");
   await expect(page.getByRole("heading", { name: "Topics to review" })).toBeVisible();
-  const searchLinks = page.getByRole("link", { name: /Search (Hacker News|LeetCode Discuss) — (past 24 months|all dates) \(external\)/ });
-  await expect(searchLinks).toHaveCount(4);
+  const searchLinks = page.getByRole("link", { name: /Search (Hacker News|LeetCode Discuss) — past 24 months \(external\)/ });
+  await expect(searchLinks).toHaveCount(2);
   for (const link of await searchLinks.all()) {
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(link).toHaveAttribute("rel", "noopener noreferrer");
@@ -186,8 +186,7 @@ test("profile submission creates a browser identity, persists, and remains isola
     expect(query).toContain("Coinbase");
     expect(query).toContain("software engineering internship");
     expect(query).toMatch(/site:(?:news\.ycombinator\.com\/item|leetcode\.com\/discuss)/);
-    if ((await link.innerText()).includes("past 24 months")) expect(query).toMatch(/after:\d{4}-\d{2}-\d{2}/);
-    else expect(query).not.toMatch(/\b(?:after|before):/);
+    expect(query).toMatch(/after:\d{4}-\d{2}-\d{2}/);
   }
   await expect(page.getByText(/These open external Google searches, not verified candidate accounts/)).toBeVisible();
   await expect(page.getByText(/Coinbase.{0,40}(?:uses|asks|has|includes)/i)).toHaveCount(0);

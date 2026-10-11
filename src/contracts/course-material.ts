@@ -6,6 +6,16 @@ export const MAX_NOTES_CHARACTERS = 100_000;
 export const MAX_MATERIAL_TEXT_CHARACTERS = 500_000;
 export const MAX_MATERIAL_TITLE = 180;
 
+export function pdfFileMetadataError(file: { name: string; size: number; type?: string } | null): string | null {
+  if (!file) return "Choose a PDF file.";
+  if (!file.name.toLowerCase().endsWith(".pdf") || (file.type && file.type !== "application/pdf")) {
+    return "Choose a PDF file. Other file types aren't supported.";
+  }
+  if (file.size < 8) return "This file is too small to be a valid PDF.";
+  if (file.size > MAX_PDF_BYTES) return "This PDF is larger than the 10 MiB limit.";
+  return null;
+}
+
 export const courseInputSchema = z.object({
   title: z.string().trim().min(2).max(120),
   courseCode: z.string().trim().max(40).optional().transform((value) => value || null),

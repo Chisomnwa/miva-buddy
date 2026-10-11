@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { LearnVoiceInput } from "@/components/learn-voice-input";
 
 type GroundedComposerProps = {
   courseId: string;
@@ -76,6 +77,7 @@ export function GroundedLearnComposer({ courseId, materialId, conceptId, convers
       <label className="sr-only" htmlFor="grounded-learn-message">Ask about this concept</label>
       <textarea id="grounded-learn-message" value={message} onChange={(event) => setMessage(event.target.value)}
         placeholder="Ask about this course concept…" maxLength={2_000} rows={3} required minLength={2} disabled={pending} />
+      <LearnVoiceInput value={message} disabled={pending} onChange={setMessage} />
       <div className="learn-composer-footer"><span>Up to 2,000 characters</span>
         <button className="button button-primary" type="submit" disabled={pending || message.trim().length < 2}>{pending ? "Thinking…" : "Send"}</button>
       </div>

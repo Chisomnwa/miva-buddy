@@ -7,15 +7,17 @@ import { createClient } from "@supabase/supabase-js";
 loadEnvConfig(process.cwd());
 const enabled = process.env.RUN_HOSTED_SUPABASE_TESTS === "1";
 
-function syntheticPdf(text: string) {
+function syntheticPdf(text: string, pageCount = 1) {
   const safeText = text.replace(/[()\\]/g, "\\$&");
   const stream = `BT /F1 12 Tf 40 100 Td (${safeText}) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 800 144] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    `<< /Type /Pages /Kids [${Array.from({ length: pageCount }, (_, index) => `${3 + index * 2} 0 R`).join(" ")}] /Count ${pageCount} >>`,
+    ...Array.from({ length: pageCount }, (_, index) => [
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 800 144] /Resources << /Font << /F1 ${3 + pageCount * 2} 0 R >> >> /Contents ${4 + index * 2} 0 R >>`,
+      `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+    ]).flat(),
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
   ];
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
@@ -128,6 +130,19 @@ test("a student can add notes and PDFs and inspect source-backed concepts", asyn
     await expect(notes.locator(".source-label").first()).toContainText("p. 1");
 
     const pdfCard = page.locator(".material-forms .content-card").nth(1);
+    await pdfCard.getByLabel("Material title").fill("Rejected text file");
+    await pdfCard.getByLabel("Choose PDF").setInputFiles({ name: "not-a-pdf.txt", mimeType: "text/plain", buffer: Buffer.from("not a PDF") });
+    await expect(pdfCard.getByRole("alert")).toContainText("Choose a PDF file");
+    await expect(page.locator(".material-card").filter({ hasText: "Rejected text file" })).toHaveCount(0);
+
+    await pdfCard.getByLabel("Material title").fill("Rejected oversized PDF");
+    await pdfCard.getByLabel("Choose PDF").setInputFiles({
+      name: "too-many-pages.pdf", mimeType: "application/pdf", buffer: syntheticPdf("Synthetic page content", 121),
+    });
+    await pdfCard.getByRole("button", { name: "Upload PDF" }).click();
+    await expect(pdfCard.getByRole("alert")).toContainText("more than the supported 120 pages");
+    await expect(page.locator(".material-card").filter({ hasText: "Rejected oversized PDF" })).toHaveCount(0);
+
     await pdfCard.getByLabel("Material title").fill("Synthetic PDF trees");
     await pdfCard.getByLabel("Choose PDF").setInputFiles({
       name: "synthetic-trees.pdf",
@@ -139,6 +154,19 @@ test("a student can add notes and PDFs and inspect source-backed concepts", asyn
     await expect(pdf.locator(".status-ready")).toBeVisible({ timeout: 90_000 });
     await expect(pdf.locator(".concept-card").first()).toBeVisible();
     await expect(pdf.locator(".source-label").first()).toContainText("p. 1");
+
+    const failedTitle = "Synthetic unreadable PDF";
+    await pdfCard.getByLabel("Material title").fill(failedTitle);
+    await pdfCard.getByLabel("Choose PDF").setInputFiles({
+      name: "synthetic-unreadable.pdf", mimeType: "application/pdf", buffer: syntheticPdf("x"),
+    });
+    await pdfCard.getByRole("button", { name: "Upload PDF" }).click();
+    const failedPdf = page.locator(".material-card").filter({ hasText: failedTitle });
+    await expect(failedPdf.locator(".status-failed")).toBeVisible({ timeout: 90_000 });
+    await failedPdf.getByRole("button", { name: "Remove failed material" }).click();
+    await expect(page.locator(".material-card").filter({ hasText: failedTitle })).toHaveCount(0);
+    await expect(page.locator(".material-card").filter({ hasText: "Synthetic PDF trees" })).toContainText("Source:");
+    await expect(page.locator(".material-card").filter({ hasText: "Synthetic BST notes" })).toContainText("Source:");
 
     const { userId } = sessionFromCookies(await page.context().cookies());
     await assertCourseRlsIsolation(courseId, userId);

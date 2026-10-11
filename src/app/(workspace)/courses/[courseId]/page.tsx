@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MaterialForms } from "@/components/course-forms";
-import { RetryMaterialForm } from "@/components/course-forms";
+import { MaterialForms, RemoveFailedMaterialForm, RetryMaterialForm } from "@/components/course-forms";
 import { CourseProcessingRefresh } from "@/components/course-processing-refresh";
 import { createClient } from "@/lib/supabase/server";
 import { displayCourseTitle } from "@/lib/course-title-display";
@@ -67,6 +66,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
         {material.status === "failed" && <><p className="material-error" role="status">{failureMessages[material.failure_code ?? ""] ?? "We couldn't process this material. Your original material is saved; you can add it again or paste its text."}</p>
           {(material.failure_code === "queue_unavailable" || material.failure_code === "processing_failed"
             || material.failure_code === "structured_processing_failed") && <RetryMaterialForm courseId={course.id} materialId={material.id} />}
+          <RemoveFailedMaterialForm courseId={course.id} materialId={material.id} />
         </>}
         {(conceptsByMaterial.get(material.id) ?? []).length > 0 && <ul className="concept-list">{(conceptsByMaterial.get(material.id) ?? []).map((concept) => <li className="concept-card" key={concept.id}>
           <h4>{concept.title}</h4><p>{concept.description}</p><p className="source-label">Source: { [...new Set(provenanceByConcept.get(concept.id) ?? [])].join(", ") || "course material" }</p>
