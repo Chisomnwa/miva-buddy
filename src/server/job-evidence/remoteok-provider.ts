@@ -4,10 +4,10 @@ import { canonicalJobSkills } from "@/server/job-evidence/skills";
 import { checkEvidenceFreshness } from "@/server/job-evidence/freshness";
 import { requireEvidencePermission, type EvidenceUseGrant } from "@/server/job-evidence/permissions";
 import type { JobEvidenceProvider, JobEvidenceQuery } from "@/server/job-evidence/provider";
+import { REMOTE_OK_DAILY_REQUEST_LIMIT, reserveRemoteOkDailyRequest, type RemoteOkBudgetReservation } from "@/server/job-evidence/remoteok-budget";
 
 const endpoint = "https://remoteok.com/api";
 const resultLimit = 3;
-const perDayLimit = 4;
 const minIntervalMs = 60_000;
 const maxRequestAgeMs = 60_000;
 const maxListingAgeMs = 30 * 24 * 60 * 60 * 1_000;
@@ -16,7 +16,7 @@ const maxResponseBytes = 2_000_000;
 
 type RequestGate = (now: Date) => number | null;
 
-/** Conservative process-local pilot cap; intentionally no response cache. */
+/** Process-local pilot cap and 60-second spacing; the spacing is not global. */
 export function createRemoteOkRequestGate(): RequestGate {
   let day = "";
   let used = 0;
@@ -30,7 +30,7 @@ export function createRemoteOkRequestGate(): RequestGate {
     }
     const waitMs = minIntervalMs - (now.getTime() - lastRequestAt);
     if (waitMs > 0) return Math.ceil(waitMs / 1_000);
-    if (used >= perDayLimit) {
+    if (used >= REMOTE_OK_DAILY_REQUEST_LIMIT) {
       return Math.max(1, Math.ceil((Date.parse(`${day}T23:59:59.999Z`) - now.getTime()) / 1_000));
     }
     used += 1;
@@ -54,7 +54,9 @@ type ProviderOptions = {
   grant?: EvidenceUseGrant;
   fetchImpl?: typeof fetch;
   now?: () => Date;
+  nodeEnvironment?: string;
   requestGate?: RequestGate;
+  reserveSharedRequest?: () => Promise<RemoteOkBudgetReservation>;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -212,6 +214,8 @@ export function createRemoteOkJobEvidenceProvider(options: ProviderOptions = {})
   const fetchImpl = options.fetchImpl ?? fetch;
   const now = options.now ?? (() => new Date());
   const requestGate = options.requestGate ?? createRemoteOkRequestGate();
+  const nodeEnvironment = options.nodeEnvironment ?? process.env.NODE_ENV;
+  const reserveSharedRequest = options.reserveSharedRequest ?? reserveRemoteOkDailyRequest;
 
   return {
     async search(query: JobEvidenceQuery, signal?: AbortSignal): Promise<JobEvidenceResult> {
@@ -226,6 +230,17 @@ export function createRemoteOkJobEvidenceProvider(options: ProviderOptions = {})
 
       const url = new URL(endpoint);
       url.searchParams.set("tags", `dev,${skill.term.toLowerCase()}`);
+      if (nodeEnvironment === "production") {
+        let reservation: RemoteOkBudgetReservation;
+        try {
+          reservation = await reserveSharedRequest();
+        } catch {
+          reservation = "unavailable";
+        }
+        if (reservation === "exhausted") return { status: "rate_limited", retryAfterSeconds: null };
+        if (reservation !== "reserved") return { status: "failed", retryable: true };
+      }
+
       let response: Response;
       try {
         response = await fetchImpl(url, {

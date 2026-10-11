@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { check, date, foreignKey, index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { courseConcepts, courseMaterials, courses } from "./course-schema";
 
 export const profiles = pgTable("profiles", {
@@ -100,6 +100,16 @@ export const practiceMessages = pgTable("practice_messages", {
   check("practice_messages_content_length_check", sql`char_length(${table.content}) between 1 and 8000`),
   check("practice_messages_attempt_length_check", sql`${table.attempt} is null or char_length(${table.attempt}) <= 6000`),
   check("practice_messages_assistant_payload_check", sql`(${table.role} = 'assistant' and ${table.responsePayload} is not null and jsonb_typeof(${table.responsePayload}) = 'object') or (${table.role} = 'user' and ${table.responsePayload} is null)`),
+]);
+
+export const remoteOkRequestBudgets = pgTable("remoteok_request_budgets", {
+  provider: text("provider").notNull(),
+  utcDate: date("utc_date", { mode: "string" }).notNull(),
+  requestCount: integer("request_count").notNull(),
+}, (table) => [
+  unique("remoteok_request_budgets_provider_day_unique").on(table.provider, table.utcDate),
+  check("remoteok_request_budgets_provider_check", sql`${table.provider} = 'remoteok'`),
+  check("remoteok_request_budgets_count_check", sql`${table.requestCount} > 0`),
 ]);
 
 export {

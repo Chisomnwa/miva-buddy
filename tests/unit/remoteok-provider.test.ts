@@ -94,6 +94,71 @@ describe("Remote OK metadata-only adapter", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("keeps the development pilot independent of the shared production budget", async () => {
+    const reserveSharedRequest = vi.fn().mockResolvedValue("unavailable");
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(response([]));
+    const provider = createRemoteOkJobEvidenceProvider({
+      nodeEnvironment: "development",
+      reserveSharedRequest,
+      fetchImpl,
+      requestGate: () => null,
+    });
+
+    await expect(provider.search({ terms: ["Python"] })).resolves.toEqual({ status: "no_evidence" });
+    expect(reserveSharedRequest).not.toHaveBeenCalled();
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it("reserves production budget immediately before the upstream request", async () => {
+    const order: string[] = [];
+    const fetchImpl = vi.fn<typeof fetch>(async () => {
+      order.push("fetch");
+      return response([]);
+    });
+    const reserveSharedRequest = vi.fn(async () => {
+      order.push("reserve");
+      return "reserved" as const;
+    });
+    const provider = createRemoteOkJobEvidenceProvider({
+      nodeEnvironment: "production",
+      reserveSharedRequest,
+      fetchImpl,
+      requestGate: () => null,
+    });
+
+    await expect(provider.search({ terms: ["Python"] })).resolves.toEqual({ status: "no_evidence" });
+    expect(order).toEqual(["reserve", "fetch"]);
+  });
+
+  it.each([
+    ["exhausted", { status: "rate_limited", retryAfterSeconds: null }],
+    ["unavailable", { status: "failed", retryable: true }],
+  ] as const)("fails closed on a production shared-budget result of %s", async (reservation, expected) => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const provider = createRemoteOkJobEvidenceProvider({
+      nodeEnvironment: "production",
+      reserveSharedRequest: vi.fn().mockResolvedValue(reservation),
+      fetchImpl,
+      requestGate: () => null,
+    });
+
+    await expect(provider.search({ terms: ["Python"] })).resolves.toEqual(expected);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("fails closed if the production budget reservation throws", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const provider = createRemoteOkJobEvidenceProvider({
+      nodeEnvironment: "production",
+      reserveSharedRequest: vi.fn().mockRejectedValue(new Error("synthetic database failure")),
+      fetchImpl,
+      requestGate: () => null,
+    });
+
+    await expect(provider.search({ terms: ["Python"] })).resolves.toEqual({ status: "failed", retryable: true });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("combines request cancellation with the adapter timeout", async () => {
     const controller = new AbortController();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(response([]));
