@@ -127,6 +127,75 @@ describe("Remote OK metadata-only adapter", () => {
     await expect(provider.search({ terms: ["Python"] })).resolves.toEqual({ status: "no_evidence" });
   });
 
+  it("rejects an oversized Content-Length before reading the response body", async () => {
+    let bodyCancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      cancel() {
+        bodyCancelled = true;
+      },
+    });
+    const oversized = new Response(body, {
+      status: 200,
+      headers: { "content-type": "application/json", "content-length": "2000001" },
+    });
+    const provider = createRemoteOkJobEvidenceProvider({
+      fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(oversized),
+      requestGate: () => null,
+    });
+
+    await expect(provider.search({ terms: ["Python"] })).resolves.toEqual({ status: "failed", retryable: false });
+    expect(bodyCancelled).toBe(true);
+  });
+
+  it("cancels a chunked response as soon as the streaming byte limit is exceeded", async () => {
+    let bodyCancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(1_500_000));
+        controller.enqueue(new Uint8Array(500_001));
+      },
+      cancel() {
+        bodyCancelled = true;
+      },
+    });
+    const provider = createRemoteOkJobEvidenceProvider({
+      fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(new Response(body, { status: 200 })),
+      requestGate: () => null,
+    });
+
+    await expect(provider.search({ terms: ["Python"] })).resolves.toEqual({ status: "failed", retryable: false });
+    expect(bodyCancelled).toBe(true);
+  });
+
+  it("fails safely when a response read is aborted or errors", async () => {
+    const controller = new AbortController();
+    const abortingFetch = vi.fn<typeof fetch>(async (_input, init) => {
+      const body = new ReadableStream<Uint8Array>({
+        start(streamController) {
+          init?.signal?.addEventListener("abort", () => {
+            streamController.error(new DOMException("Aborted", "AbortError"));
+          }, { once: true });
+        },
+      });
+      return new Response(body, { status: 200 });
+    });
+    const provider = createRemoteOkJobEvidenceProvider({ fetchImpl: abortingFetch, requestGate: () => null });
+    const result = provider.search({ terms: ["Python"] }, controller.signal);
+    controller.abort();
+    await expect(result).resolves.toEqual({ status: "failed", retryable: false });
+
+    const failedRead = new ReadableStream<Uint8Array>({
+      start(streamController) {
+        streamController.error(new Error("synthetic read failure"));
+      },
+    });
+    const failedReadProvider = createRemoteOkJobEvidenceProvider({
+      fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(new Response(failedRead, { status: 200 })),
+      requestGate: () => null,
+    });
+    await expect(failedReadProvider.search({ terms: ["Python"] })).resolves.toEqual({ status: "failed", retryable: false });
+  });
+
   it("keeps empty, malformed, unavailable, and rate-limited source states distinct", async () => {
     const providerFor = (fetchImpl: typeof fetch) => createRemoteOkJobEvidenceProvider({ fetchImpl, requestGate: () => null });
     const empty = providerFor(vi.fn<typeof fetch>().mockResolvedValue(response([{ legal: "notice" }])));

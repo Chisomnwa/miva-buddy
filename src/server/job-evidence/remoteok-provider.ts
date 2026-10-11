@@ -12,6 +12,7 @@ const minIntervalMs = 60_000;
 const maxRequestAgeMs = 60_000;
 const maxListingAgeMs = 30 * 24 * 60 * 60 * 1_000;
 const requestTimeoutMs = 6_000;
+const maxResponseBytes = 2_000_000;
 
 type RequestGate = (now: Date) => number | null;
 
@@ -155,6 +156,56 @@ function parseRetryAfter(response: Response): number | null {
   return Number.isInteger(value) && value > 0 ? value : null;
 }
 
+async function readBoundedJson(response: Response): Promise<{ ok: true; value: unknown } | { ok: false }> {
+  const contentLength = response.headers.get("content-length");
+  if (contentLength && /^\d+$/u.test(contentLength) && Number(contentLength) > maxResponseBytes) {
+    try {
+      await response.body?.cancel();
+    } catch {
+      // Cancellation is best-effort; the oversized response is rejected either way.
+    }
+    return { ok: false };
+  }
+
+  if (!response.body) return { ok: false };
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxResponseBytes) {
+        try {
+          await reader.cancel();
+        } catch {
+          // Cancellation is best-effort; the oversized response is rejected either way.
+        }
+        return { ok: false };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { ok: false };
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return { ok: true, value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown };
+  } catch {
+    return { ok: false };
+  }
+}
+
 /** Live metadata-only adapter; no descriptions, persistence, redirects, or cache. */
 export function createRemoteOkJobEvidenceProvider(options: ProviderOptions = {}): JobEvidenceProvider {
   const grant = options.grant ?? remoteOkMetadataGrant;
@@ -190,14 +241,9 @@ export function createRemoteOkJobEvidenceProvider(options: ProviderOptions = {})
       if (response.status === 429) return { status: "rate_limited", retryAfterSeconds: parseRetryAfter(response) };
       if (!response.ok) return { status: "failed", retryable: response.status >= 500 };
 
-      let rows: unknown[];
-      try {
-        const payload: unknown = await response.json();
-        if (!Array.isArray(payload)) return { status: "failed", retryable: false };
-        rows = payload;
-      } catch {
-        return { status: "failed", retryable: false };
-      }
+      const parsed = await readBoundedJson(response);
+      if (!parsed.ok || !Array.isArray(parsed.value)) return { status: "failed", retryable: false };
+      const rows = parsed.value;
 
       const retrievedTime = now();
       const requestAgeMs = retrievedTime.getTime() - requestTime.getTime();
