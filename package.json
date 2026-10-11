@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration:remoteok:supabase": "node --import tsx scripts/run-remoteok-budget-supabase-tests.ts",
     "test:embeddings:ollama": "node scripts/run-ollama-embedding-evals.mjs",
     "worker:dev": "node --import tsx src/worker.ts",
     "test:ai-evals": "node scripts/run-ai-evals.mjs",

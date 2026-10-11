@@ -7,5 +7,6 @@ test-results/
 .env
 .env.*
 !.env.example
+.supabase-remoteok-test-ca.pem
 .DS_Store
 *.tsbuildinfo
