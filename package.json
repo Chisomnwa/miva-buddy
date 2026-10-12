@@ -11,13 +11,15 @@
     "test": "vitest run",
     "test:integration:remoteok:supabase": "node --import tsx scripts/run-remoteok-budget-supabase-tests.ts",
     "test:embeddings:ollama": "node scripts/run-ollama-embedding-evals.mjs",
+    "dev:local-pdf-gemini": "node scripts/local-pdf-gemini-runtime.mjs",
     "worker:dev": "node --import tsx src/worker.ts",
     "test:ai-evals": "node scripts/run-ai-evals.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:hosted-config": "node scripts/check-hosted-config.mjs",
     "test:e2e": "playwright test",
     "db:baseline:hosted": "node scripts/record-hosted-migration-baseline.mjs",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "node scripts/migrate-local-supabase.mjs",
+    "db:migrate:local": "node scripts/migrate-local-supabase.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
