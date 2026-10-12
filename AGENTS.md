@@ -96,7 +96,9 @@ Do not silently resolve a genuine conflict. Record it and request review when it
 - `npm run build`
 - `npm run test:e2e` (local onboarding/accessibility/responsive checks; hosted anonymous-user checks are opt-in with `RUN_HOSTED_SUPABASE_TESTS=1` to avoid consuming Supabase Auth rate limits)
 - `npm run test:ai-evals` (live synthetic Gemini evaluations; requires `GEMINI_API_KEY` in ignored `.env.local` and makes hosted API requests)
-- `npm run worker:dev` (separate material worker; requires hosted PostgreSQL `DATABASE_URL`, a configured generation provider, and the embedding service)
+- `npm run worker:dev` (separate material worker; requires a reachable PostgreSQL `DATABASE_URL`, a configured generation provider, and the embedding service)
+- `npm run db:migrate:local` (guarded Drizzle migration command; verifies local Supabase/Docker identity and loopback database endpoint before applying migrations to the local database)
+- `npm run dev:local-pdf-gemini` (guarded local PDF/Gemini workflow; verifies local Supabase identity and queue state before starting web and worker processes; makes real Gemini API requests, so use synthetic content unless account terms permit otherwise)
 - `npm run check:secrets` (scans eligible repository files and staged paths for common credential patterns and accidentally staged secret-bearing files; never reads ignored local environment files)
 - `npm run check:hosted-config` (reports only required variable names and safe validity/connectivity statuses; never prints values or raw errors; database check is read-only)
 

@@ -167,6 +167,17 @@ h2 { margin-bottom: 10px; font-size: 21px; font-weight: 650; line-height: 1.3; }
 .learn-message .eyebrow { margin-bottom: 8px; }
 .learn-message-student .eyebrow { color: var(--slate-700); }
 .learn-message-content { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.72; }
+.learn-markdown-content { white-space: normal; }
+.learn-markdown-paragraph { margin: 0 0 11px; white-space: pre-wrap; }
+.learn-markdown-paragraph:last-child { margin-bottom: 0; }
+.learn-markdown-heading { margin: 15px 0 7px; color: var(--navy-900); line-height: 1.35; }
+.learn-markdown-heading:first-child { margin-top: 0; }
+.learn-markdown-content h3 { font-size: 17px; }
+.learn-markdown-content h4 { font-size: 15px; }
+.learn-markdown-content h5 { font-size: 14px; }
+.learn-markdown-list { margin: 5px 0 13px; padding-left: 1.6em; }
+.learn-markdown-list li { padding-left: 2px; white-space: pre-wrap; }
+.learn-markdown-list li + li { margin-top: 4px; }
 .code-example { max-width: 100%; min-width: 0; margin: 12px 0; overflow: hidden; border: 1px solid #d7e0ed; border-radius: 9px; background: #f4f6fa; }
 .code-language { display: block; padding: 5px 12px; border-bottom: 1px solid #d7e0ed; color: var(--slate-700); font-size: 11px; font-weight: 700; }
 .code-language { overflow-wrap: anywhere; }

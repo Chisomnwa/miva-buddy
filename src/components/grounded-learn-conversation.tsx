@@ -24,13 +24,13 @@ export function GroundedLearnConversation({ messages }: { messages: GroundedStor
         {message.role === "user" ? <div className="learn-message-content"><MessageContent content={message.content} /></div>
           : segments.length ? <div className="grounded-segments">{segments.map((segment, index) => <section className={`grounded-segment grounded-segment-${segment.kind}`} key={`${message.id}-${index}`}>
             <p className="grounding-label">{segment.kind === "grounded" ? "From your course material" : segment.kind === "no_support" ? "Not found in your course material" : "Additional explanation"}</p>
-            <div className="learn-message-content"><MessageContent content={segment.content} /></div>
+            <div className="learn-message-content"><MessageContent content={segment.content} markdown /></div>
             {segment.kind === "grounded" && <div className="grounded-citations" aria-label="Supporting sources">
               <span className="source-group-label">Supporting sources</span>
               {segment.citationIds.map((sourceId) => <GroundedSourceInspector key={sourceId} sourceId={sourceId} label="Inspect source" />)}
             </div>}
           </section>)}</div>
-          : <section className="grounded-segment grounded-segment-additional"><p className="grounding-label">Additional explanation</p><div className="learn-message-content"><MessageContent content={message.content} /></div></section>}
+          : <section className="grounded-segment grounded-segment-additional"><p className="grounding-label">Additional explanation</p><div className="learn-message-content"><MessageContent content={message.content} markdown /></div></section>}
         {message.role === "assistant" && <div className="message-actions"><CopyResponseButton content={message.content} /></div>}
       </article>;
     })}

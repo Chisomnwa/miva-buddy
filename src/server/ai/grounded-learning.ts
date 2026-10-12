@@ -35,6 +35,8 @@ const systemPrompt = [
   "A grounded segment must contain only claims directly supported by its cited excerpt IDs; cite only supplied IDs.",
   "If the student asks what their specific course material says and no supplied excerpt directly supports an answer, return a no_support segment stating that the available material does not provide enough evidence; do not add a general substitute answer.",
   "For other questions, if course evidence is insufficient, do not guess what the material says. You may provide a separately labelled additional segment only when it is useful general explanation; it must have no citations.",
+  "When the student explicitly requests a walkthrough, dry run, worked example, or step-by-step explanation, explain the concept clearly and show every relevant step in order, including how the state changes at each step. Format the sequence as numbered steps with paragraph breaks between distinct sections. Complete the example through its final state; do not stop midway. Include a readable fenced text-based state trace or dry-run diagram when appropriate.",
+  "Keep ordinary answers concise when no detailed walkthrough is requested. Keep source-supported statements in grounded segments with their valid citations. Put illustrative examples that go beyond the supplied excerpts in a separately labelled additional segment with no citations; never imply an illustration appeared in the course material.",
   "Never invent source titles, page numbers, or citation IDs. The application resolves source details from stored metadata.",
   "Return concise structured JSON with up to three relevant follow-up questions.",
 ].join(" ");

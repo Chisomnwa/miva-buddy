@@ -19,6 +19,13 @@ function signal() {
 }
 
 describe("direct learning contracts and provider boundary", () => {
+  it("requests structured formatting for explicit walkthroughs but keeps ordinary answers concise", () => {
+    expect(learningSystemPrompt).toContain("use clear numbered steps");
+    expect(learningSystemPrompt).toContain("fenced text block for a state trace or diagram");
+    expect(learningSystemPrompt).toContain("Keep ordinary answers focused and concise");
+    expect(learningSystemPrompt).toContain("Do not force a detailed template on ordinary questions");
+  });
+
   it("validates bounded requests and structured replies", () => {
     expect(learnRequestSchema.safeParse({ message: "  Explain heaps  " }).success).toBe(true);
     expect(learnRequestSchema.safeParse({ message: "x" }).success).toBe(false);

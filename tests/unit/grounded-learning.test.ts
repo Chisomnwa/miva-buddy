@@ -31,6 +31,52 @@ function providerWith(responses: string[]): GenerationProvider & { calls: number
 const reply = (segments: unknown[]) => JSON.stringify({ segments, followUpQuestions: [] });
 
 describe("grounded learning response contract", () => {
+  it("prompts for a complete FIFO dry run and preserves source versus illustrative segments", async () => {
+    const dryRun = [
+      "Illustrative dry run (A, B, and C are example values, not a trace from the lecture):",
+      "```text",
+      "Enqueue A -> [A]",
+      "Enqueue B -> [A, B]",
+      "Enqueue C -> [A, B, C]",
+      "Dequeue A -> [B, C]",
+      "Dequeue B -> [C]",
+      "Dequeue C -> []",
+      "```",
+    ].join("\n");
+    let capturedMessages: { role: string; content: string }[] = [];
+    const provider: GenerationProvider = {
+      async generate(input) {
+        capturedMessages = input.messages;
+        return reply([
+          { kind: "grounded", content: "A FIFO queue removes the item that was added first.", citationIds: [sourceId] },
+          { kind: "additional", content: dryRun, citationIds: [] },
+        ]);
+      },
+    };
+    const fifoChunk = {
+      ...chunk,
+      content: "A FIFO queue removes the item that was added first.",
+    };
+
+    const result = await generateGroundedLearningReply(provider, {
+      question: "Walk me through enqueueing A, B, and C, then dequeue each one. Show every queue state through empty.",
+      excerpts: [fifoChunk], history: [], signal: new AbortController().signal,
+    });
+
+    expect(capturedMessages[0].content).toContain("show every relevant step in order");
+    expect(capturedMessages[0].content).toContain("Complete the example through its final state");
+    expect(capturedMessages[0].content).toContain("Format the sequence as numbered steps");
+    expect(capturedMessages[0].content).toContain("fenced text-based state trace");
+    expect(capturedMessages[0].content).toContain("Keep ordinary answers concise");
+    expect(result.segments).toEqual([
+      { kind: "grounded", content: "A FIFO queue removes the item that was added first.", citationIds: [sourceId] },
+      { kind: "additional", content: dryRun, citationIds: [] },
+    ]);
+    for (const state of ["Enqueue A -> [A]", "Enqueue B -> [A, B]", "Enqueue C -> [A, B, C]", "Dequeue A -> [B, C]", "Dequeue B -> [C]", "Dequeue C -> []"]) {
+      expect(result.segments[1].content).toContain(state);
+    }
+  });
+
   it("accepts grounded claims citing only retrieved source IDs and uncited additional explanation", async () => {
     const provider = providerWith([reply([
       { kind: "grounded", content: "Smaller keys are stored on the left.", citationIds: [sourceId] },
@@ -102,7 +148,7 @@ describe("grounded learning response contract", () => {
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/server/embeddings/create-provider", () => ({
-  createEmbeddingProvider: () => ({ embed: async () => [Array.from({ length: 768 }, () => 0.1)] }),
+  createEmbeddingProvider: () => ({ modelId: "fake-v1", embed: async () => [Array.from({ length: 768 }, () => 0.1)] }),
 }));
 
 describe("course retrieval scope and outcomes", () => {

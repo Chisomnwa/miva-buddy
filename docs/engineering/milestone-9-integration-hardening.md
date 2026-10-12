@@ -26,6 +26,10 @@ In progress. Local application hardening is implemented; M9 is not complete. M7 
 - Safe hosted configuration check reported required variable names present/valid and PostgreSQL connected. No values were read or printed. `.env.local` remains ignored.
 - No production deployment, production host smoke test, performance budget test, manual keyboard/screen-reader review, backup/restore exercise, or production operations verification has been performed.
 
+## Additional local verification — October 12, 2026
+
+After the synthetic Gemini embedding and local PDF workflow changes, the latest recorded local checks passed: 113 automated tests, TypeScript typecheck, ESLint, secret scan, and `git diff --check`. General Learn Markdown formatting was visually verified in the browser. Course-grounded Markdown still requires a final visual regression check. Migration 0010 and the PDF/Gemini/retrieval smoke test were verified on isolated local Supabase only; neither hosted Supabase project has been migrated or verified for these changes. Production deployment and persistent worker hosting remain unverified.
+
 ## Remaining work and release limitations
 
 1. Run the complete hosted E2E suite once after the final grounded-Learn cancellation fix; perform the remaining manual performance/accessibility review and production-like checks from the approved M9 gate.

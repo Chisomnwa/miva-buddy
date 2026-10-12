@@ -59,10 +59,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the system boundaries and implementat
 ### You’ll need
 
 - Node.js 20 or newer and npm.
-- A Supabase development project with anonymous sign-in enabled.
-- For course-material processing: PostgreSQL, the separate worker, and an embedding service. Ollama with `nomic-embed-text` is the supported local embedding option.
+- A Supabase development project (hosted or local) with anonymous sign-in enabled.
+- For course-material processing: PostgreSQL, the separate worker, and an embedding provider. Ollama with `nomic-embed-text` is available for local embeddings; Gemini embeddings are also supported when explicitly selected.
 
-Docker is not required. This is not an offline-only app: Supabase provides authentication and saved data.
+Docker is not required for the hosted-development setup described below. The isolated local Supabase workflow uses Docker. Miva Buddy is not an offline-only app: Supabase provides authentication and saved data.
 
 ### Install and configure
 
@@ -79,9 +79,11 @@ NEXT_PUBLIC_SUPABASE_URL=<your-development-project-url>
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-development-publishable-key>
 ```
 
-Apply the SQL migrations in `drizzle/` to the development database in order. The [Supabase setup guide](docs/engineering/milestone-1-supabase-setup.md) and [deployment guide](docs/engineering/deployment-readiness.md) have more detail. Never commit `.env.local`, database URLs, or provider credentials.
+Apply reviewed SQL migrations in `drizzle/` to the intended development database in order, using its documented safe procedure. For the isolated local stack, use only the guarded command below. The [Supabase setup guide](docs/engineering/milestone-1-supabase-setup.md) and [deployment guide](docs/engineering/deployment-readiness.md) have more detail. Never commit `.env.local`, database URLs, or provider credentials.
 
-To queue and process course materials, also set a server-only `DATABASE_URL` and run the worker below. Local development defaults to fake AI and embeddings. For real model responses, choose a generation provider with `AI_PROVIDER` and configure its credentials—for example, `GEMINI_API_KEY` for Gemini—or use a reachable local Ollama service. For real course embeddings, set `EMBEDDING_PROVIDER=ollama`, `OLLAMA_BASE_URL`, and `OLLAMA_EMBEDDING_MODEL` (default: `nomic-embed-text`). The [provider decision](docs/engineering/ai-provider-decision.md) records the current evaluation and data-use caveats.
+For the isolated local Supabase workflow, start Docker Desktop and run `npx supabase start`, then apply the ordered migrations with `npm run db:migrate:local`. That command verifies the local Supabase/Docker identity and loopback database endpoint before invoking Drizzle; do not replace it with an unguarded migration command. Before uploading, confirm the private `course-materials` bucket exists in local Storage Studio: the repository config declares its limits, but that declaration did not provision the bucket in the observed local CLI setup. If missing, provision it through the local Supabase Storage UI, not by editing Storage's internal tables. The guarded `npm run dev:local-pdf-gemini` command starts the web app and worker together after rechecking local identity and queue state.
+
+To queue and process course materials, also set a server-only `DATABASE_URL` and run the worker below. Ordinary local development defaults to fake AI and embeddings. For real model responses, choose a generation provider with `AI_PROVIDER` and configure its credentials—for example, `GEMINI_API_KEY` for Gemini—or use a reachable local Ollama service. For Ollama embeddings, set `EMBEDDING_PROVIDER=ollama`, `OLLAMA_BASE_URL`, and `OLLAMA_EMBEDDING_MODEL` (default: `nomic-embed-text`). The guarded `npm run dev:local-pdf-gemini` workflow verifies the local Supabase stack and queue, then starts the web app and worker with Gemini generation and embeddings. The recorded smoke test used synthetic content, but the launcher does not inspect or restrict uploaded content; it makes real Gemini API requests. See the [M3 setup record](docs/engineering/milestone-3-setup.md) before using it. The [provider decision](docs/engineering/ai-provider-decision.md) records evaluation and data-use caveats.
 
 The `REMOTEOK_METADATA_PILOT=true` and `HIMALAYAS_METADATA_ENABLED=true` flags are optional. They are not needed to run Miva Buddy. Remote OK remains development-only, and neither job source verifies requirements from descriptions.
 
@@ -109,7 +111,7 @@ Without the worker, the app can still run, but new course materials will not fin
 - Supabase anonymous Auth, PostgreSQL, and private file storage.
 - pg-boss for the course-processing queue.
 - PostgreSQL full-text search and `pgvector` for course retrieval.
-- Replaceable generation and embedding interfaces, with Gemini, Groq, and Ollama generation adapters and an Ollama embedding adapter.
+- Replaceable generation and embedding interfaces, with Gemini, Groq, and Ollama generation adapters and Gemini, Ollama, and deterministic fake embedding adapters.
 - Zod for validation, Vitest for unit tests, and Playwright for browser tests.
 
 ## Repository map
@@ -138,13 +140,14 @@ npm run check:secrets
 
 The default browser suite runs locally. Hosted Supabase tests are opt-in with `RUN_HOSTED_SUPABASE_TESTS=1`; they create anonymous test identities and synthetic records, so run them only with a safe test-data plan. Hosted end-to-end coverage is incomplete, including the latest interview-search and mobile journey. Local checks are not the same as hosted release acceptance.
 
-Optional checks include `npm run test:embeddings:ollama` for a local synthetic embedding check and `npm run test:ai-evals` for synthetic prompts sent to the configured hosted AI provider. `npm run check:hosted-config` reports configuration status without printing values.
+Optional checks include `npm run test:embeddings:ollama` for a local synthetic embedding check and `npm run test:ai-evals` for synthetic prompts sent to the configured hosted AI provider. The dedicated local PDF/Gemini workflow is `npm run dev:local-pdf-gemini`; it requires a running local Supabase stack and a configured Gemini key, and makes provider requests. `npm run check:hosted-config` reports configuration status without printing values.
 
 ## Current limitations
 
 - Miva Buddy is a development prototype. No public deployment has occurred; production hosting, services, backups, monitoring, and abuse protection remain release work.
 - Job cards are related listings, not verified skill requirements. Interview links are external searches, not verified candidate accounts.
 - Browser voice input depends on speech-recognition support and permissions. The browser vendor may process speech; Miva Buddy does not store raw audio. Typing remains available.
+- Gemini embeddings and the synthetic PDF-to-grounded-Learn workflow have been verified on the isolated local Supabase stack. Migration 0010 has not been applied to or verified against either hosted Supabase project. Production hosting and a persistent worker runtime remain unverified; course-grounded Markdown still needs final visual regression testing.
 - Recent hosted interview E2E coverage has not completed. See [project status](docs/plans/project-status.md) for the remaining gaps and release gates.
 
 ## Demo

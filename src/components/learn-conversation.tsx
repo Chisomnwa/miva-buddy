@@ -22,7 +22,7 @@ export function LearnConversation({ messages }: { messages: LearnMessageForDispl
         return <article className={`learn-message ${message.role === "assistant" ? "learn-message-assistant" : "learn-message-student"}`} key={message.id}>
           {(message.role !== "assistant" || !interviewSegment) && <p className="eyebrow">{message.role === "assistant" ? "MIVA BUDDY" : "YOU"}</p>}
           {resolvedInterviewSegment ? <InterviewPreparationCard value={resolvedInterviewSegment} id={message.id} />
-            : <div className="learn-message-content"><MessageContent content={message.content} /></div>}
+            : <div className="learn-message-content"><MessageContent content={message.content} markdown={message.role === "assistant"} /></div>}
           {message.role === "assistant" && !interviewSegment && <div className="message-actions"><CopyResponseButton content={message.content} /></div>}
         </article>;
       })}

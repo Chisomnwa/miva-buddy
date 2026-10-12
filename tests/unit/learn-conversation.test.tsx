@@ -21,6 +21,42 @@ describe("Learn conversation rendering", () => {
     expect(html).toContain("Then inspect the result.");
   });
 
+  it("renders paragraphs, headings, numbered steps, lists, and fenced dry-run traces safely", () => {
+    const content = [
+      "## FIFO dry run",
+      "",
+      "A queue is processed in order.",
+      "Line breaks within a paragraph are retained.",
+      "",
+      "Each operation updates the front of the queue.",
+      "",
+      "1. Enqueue A.",
+      "",
+      "2. Enqueue B.",
+      "",
+      "3. Dequeue A.",
+      "",
+      "- The front item leaves first.",
+      "",
+      "- The remaining item stays queued.",
+      "",
+      "```text",
+      "[A, B] -> [B] -> []",
+      "```",
+    ].join("\n");
+    const html = renderToStaticMarkup(
+      <LearnConversation messages={[{ ...message, content }]} />,
+    );
+
+    expect(html).toContain("<h4 class=\"learn-markdown-heading\">FIFO dry run</h4>");
+    expect(html).toContain("<p class=\"learn-markdown-paragraph\">A queue is processed in order.<br/>Line breaks within a paragraph are retained.</p>");
+    expect(html).toContain("<p class=\"learn-markdown-paragraph\">Each operation updates the front of the queue.</p>");
+    expect(html).toContain("<ol class=\"learn-markdown-list\">");
+    expect(html).toContain("<ul class=\"learn-markdown-list\">");
+    expect(html.match(/<ol class=\"learn-markdown-list\"/g)).toHaveLength(1);
+    expect(html).toContain("<pre aria-label=\"Code example\" class=\"learn-code-block\" tabindex=\"0\"><code>[A, B] -&gt; [B] -&gt; []\n</code></pre>");
+  });
+
   it("renders model-provided markup as text rather than executable HTML", () => {
     const html = renderToStaticMarkup(
       <LearnConversation messages={[{ ...message, content: '<script>alert("x")</script>' }]} />,
@@ -69,6 +105,6 @@ describe("Learn conversation rendering", () => {
     expect(html).toContain("Stage: <strong>On-site interview</strong>");
     expect(html).toContain("INTERVIEW PREPARATION");
     expect(html).not.toContain("MIVA BUDDY</p><section class=\"interview-preparation-card");
-    expect(html).toContain('<p class="eyebrow">MIVA BUDDY</p><div class="learn-message-content"><span>A regular explanation.</span></div>');
+    expect(html).toContain('<p class="eyebrow">MIVA BUDDY</p><div class="learn-message-content"><div class="learn-markdown-content"><p class="learn-markdown-paragraph">A regular explanation.</p></div></div>');
   });
 });
