@@ -11,6 +11,8 @@ import { extractCourseConcepts } from "./concept-extraction";
 import { extractPdfPages, PdfMaterialError } from "./pdf-extraction";
 import type { PageText } from "./chunking";
 
+const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
 type Dependencies = {
   pool: Pool;
   embeddings: EmbeddingProvider;
@@ -37,13 +39,10 @@ async function loadPages(job: ProcessMaterialJob, dependencies: Dependencies) {
   }
 
   const config = getServerConfig();
-  const signedUrl = new URL(job.signedUrl);
-  const projectOrigin = new URL(config.NEXT_PUBLIC_SUPABASE_URL).origin;
-  const expectedPrefix = `/storage/v1/object/sign/course-materials/${job.userId}/${job.courseId}/${job.materialId}/`;
-  if (signedUrl.protocol !== "https:" || signedUrl.origin !== projectOrigin
-    || !decodeURIComponent(signedUrl.pathname).startsWith(expectedPrefix)) {
+  if (!isTrustedCourseMaterialSignedUrl(job.signedUrl, config.NEXT_PUBLIC_SUPABASE_URL, job)) {
     throw new TerminalMaterialProcessingError("invalid_storage_reference");
   }
+  const signedUrl = new URL(job.signedUrl);
 
   const response = await fetch(signedUrl, {
     signal: dependencies.signal,
@@ -57,10 +56,37 @@ async function loadPages(job: ProcessMaterialJob, dependencies: Dependencies) {
   return extractPdfPages(bytes);
 }
 
+export function isTrustedCourseMaterialSignedUrl(
+  rawSignedUrl: string,
+  rawProjectUrl: string,
+  job: Pick<ProcessMaterialJob, "userId" | "courseId" | "materialId">,
+): boolean {
+  try {
+    const signedUrl = new URL(rawSignedUrl);
+    const projectUrl = new URL(rawProjectUrl);
+    const localHttp = projectUrl.protocol === "http:"
+      && signedUrl.protocol === "http:"
+      && loopbackHosts.has(projectUrl.hostname.toLowerCase())
+      && loopbackHosts.has(signedUrl.hostname.toLowerCase());
+    const secureRemote = projectUrl.protocol === "https:" && signedUrl.protocol === "https:";
+    const expectedPrefix = `/storage/v1/object/sign/course-materials/${job.userId}/${job.courseId}/${job.materialId}/`;
+
+    return (localHttp || secureRemote)
+      && signedUrl.origin === projectUrl.origin
+      && decodeURIComponent(signedUrl.pathname).startsWith(expectedPrefix);
+  } catch {
+    return false;
+  }
+}
+
 async function embedInBatches(dependencies: Dependencies, texts: string[]) {
   const allVectors: number[][] = [];
   for (let index = 0; index < texts.length; index += 24) {
-    const batch = await dependencies.embeddings.embed({ texts: texts.slice(index, index + 24), signal: dependencies.signal });
+    const batch = await dependencies.embeddings.embed({
+      texts: texts.slice(index, index + 24),
+      signal: dependencies.signal,
+      task: "document",
+    });
     allVectors.push(...batch);
   }
   if (allVectors.length !== texts.length || allVectors.some((vector) => vector.length !== 768)) {
@@ -126,8 +152,7 @@ export async function processCourseMaterial(rawJob: unknown, dependencies: Depen
     chunks.map(({ id, ordinal, pageStart, pageEnd, content }) => ({ id, ordinal, pageStart, pageEnd, content })),
     dependencies.signal,
   );
-  const config = getServerConfig();
-  const embeddingModel = config.EMBEDDING_PROVIDER === "ollama" ? config.OLLAMA_EMBEDDING_MODEL : "fake-v1";
+  const embeddingModel = dependencies.embeddings.modelId;
   const client = await dependencies.pool.connect();
   try {
     await client.query("begin");

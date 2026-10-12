@@ -1,9 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { retrieveCourseEvidence } from "@/server/retrieval/course-retrieval";
 
+const { embeddingMock } = vi.hoisted(() => ({
+  embeddingMock: vi.fn(async ({ texts }: { texts: string[] }) => texts.map(() => Array(768).fill(0.01))),
+}));
 vi.mock("server-only", () => ({}));
 vi.mock("@/server/embeddings/create-provider", () => ({
-  createEmbeddingProvider: () => ({ embed: async ({ texts }: { texts: string[] }) => texts.map(() => Array(768).fill(0.01)) }),
+  createEmbeddingProvider: () => ({ modelId: "fake-v1", embed: embeddingMock }),
 }));
 
 const courseId = "5368fc6f-e63f-43c1-b4aa-d4c9b3a0a89a";
@@ -23,6 +26,15 @@ const chunkRows = Array.from({ length: 3 }, (_, index) => ({
 }));
 
 describe("course evidence retrieval cancellation", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+    vi.stubEnv("EMBEDDING_PROVIDER", "fake");
+    embeddingMock.mockClear();
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
   it("passes the request deadline to the authenticated retrieval RPC", async () => {
     const abortSignal = vi.fn().mockResolvedValue({ data: chunkRows, error: null });
     const rpc = vi.fn(() => ({ abortSignal }));
@@ -39,6 +51,10 @@ describe("course evidence retrieval cancellation", () => {
 
     expect(result.status).toBe("supporting_evidence_found");
     expect(rpc).toHaveBeenCalledTimes(1);
+    expect(embeddingMock).toHaveBeenCalledWith(expect.objectContaining({ task: "query" }));
+    expect(rpc).toHaveBeenCalledWith("search_course_material_chunks", expect.objectContaining({
+      p_embedding_model: "fake-v1",
+    }));
     expect(abortSignal).toHaveBeenCalledWith(signal);
   });
 

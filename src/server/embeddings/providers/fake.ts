@@ -1,6 +1,8 @@
 import type { EmbeddingInput, EmbeddingProvider } from "../provider";
 
 export class FakeEmbeddingProvider implements EmbeddingProvider {
+  readonly modelId = "fake-v1";
+
   async embed(input: EmbeddingInput): Promise<number[][]> {
     if (input.signal.aborted) throw new DOMException("Aborted", "AbortError");
     return input.texts.map((text) => {

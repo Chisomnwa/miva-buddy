@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Pool } from "pg";
 import type { GenerationProvider } from "@/server/ai/provider";
 import type { EmbeddingProvider } from "@/server/embeddings/provider";
-import { markTerminalFailure, processCourseMaterial } from "@/server/ingestion/process-material";
+import { isTrustedCourseMaterialSignedUrl, markTerminalFailure, processCourseMaterial } from "@/server/ingestion/process-material";
 import { PdfMaterialError } from "@/server/ingestion/pdf-extraction";
 import type { ProcessMaterialJob } from "@/contracts/course-material";
 import { handleMaterialJob } from "@/server/queue/handle-material-job";
@@ -18,9 +18,11 @@ const sourceText = "A binary search tree stores smaller keys on the left and lar
 function fakePool(options: { failPageRead?: boolean } = {}) {
   const workerQueries: string[] = [];
   const transactionQueries: string[] = [];
+  const transactionParameters: unknown[][] = [];
   const client = {
-    query: async (query: string) => {
+    query: async (query: string, parameters: unknown[] = []) => {
       transactionQueries.push(query);
+      transactionParameters.push(parameters);
       return { rows: [], rowCount: 1 };
     },
     release: () => {},
@@ -38,8 +40,9 @@ function fakePool(options: { failPageRead?: boolean } = {}) {
     connect: async () => client,
     workerQueries,
     transactionQueries,
+    transactionParameters,
   };
-  return pool as unknown as Pool & { workerQueries: string[]; transactionQueries: string[] };
+  return pool as unknown as Pool & { workerQueries: string[]; transactionQueries: string[]; transactionParameters: unknown[][] };
 }
 
 function fakeGeneration(): GenerationProvider {
@@ -61,20 +64,46 @@ describe("course material worker pipeline", () => {
     vi.unstubAllEnvs();
   });
 
+  it("allows an HTTP signed URL only for the configured local loopback Supabase origin", () => {
+    const pdfJob = { ...job, kind: "pdf" as const, signedUrl: "" };
+    const localOrigin = "http://127.0.0.1:54321";
+    const signedUrl = `${localOrigin}/storage/v1/object/sign/course-materials/${job.userId}/${job.courseId}/${job.materialId}/lecture.pdf?token=synthetic`;
+
+    expect(isTrustedCourseMaterialSignedUrl(signedUrl, localOrigin, pdfJob)).toBe(true);
+    expect(isTrustedCourseMaterialSignedUrl(
+      signedUrl.replace("127.0.0.1", "storage.example.test"),
+      "http://storage.example.test:54321",
+      pdfJob,
+    )).toBe(false);
+  });
+
+  it("keeps HTTPS and owner-scoped path checks for hosted Storage URLs", () => {
+    const pdfJob = { ...job, kind: "pdf" as const, signedUrl: "" };
+    const origin = "https://test-project.supabase.co";
+    const path = `/storage/v1/object/sign/course-materials/${job.userId}/${job.courseId}/${job.materialId}/lecture.pdf?token=synthetic`;
+
+    expect(isTrustedCourseMaterialSignedUrl(`${origin}${path}`, origin, pdfJob)).toBe(true);
+    expect(isTrustedCourseMaterialSignedUrl(`${origin}${path}`.replace(job.userId, "another-user"), origin, pdfJob)).toBe(false);
+    expect(isTrustedCourseMaterialSignedUrl(`${origin}${path}`.replace("https:", "http:"), origin, pdfJob)).toBe(false);
+  });
+
   it("atomically replaces page, chunk, concept, and source rows while preserving ownership scope", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
     vi.stubEnv("EMBEDDING_PROVIDER", "fake");
     const pool = fakePool();
-    const embeddings: EmbeddingProvider = { embed: async ({ texts }) => texts.map(() => Array(768).fill(0.25)) };
+    const embed = vi.fn(async ({ texts }: { texts: string[] }) => texts.map(() => Array(768).fill(0.25)));
+    const embeddings: EmbeddingProvider = { modelId: "fake-v1", embed };
     const dependencies = { pool, embeddings, generation: fakeGeneration(), signal: new AbortController().signal };
 
     await processCourseMaterial(job, dependencies);
     await processCourseMaterial(job, dependencies);
 
     expect(pool.transactionQueries.filter((query) => query === "begin")).toHaveLength(2);
+    expect(embed).toHaveBeenCalledWith(expect.objectContaining({ task: "document" }));
     expect(pool.transactionQueries.filter((query) => query.includes("delete from public.material_chunks"))).toHaveLength(2);
     expect(pool.transactionQueries.some((query) => query.includes("insert into public.course_concept_sources"))).toBe(true);
+    expect(pool.transactionParameters.some((parameters) => parameters[9] === "fake-v1")).toBe(true);
     expect(pool.transactionQueries.at(-1)).toBe("commit");
     expect(pool.transactionQueries.every((query) => !query.startsWith("delete from storage."))).toBe(true);
     expect(pool.workerQueries.every((query) => !query.includes("where id = $1\n"))).toBe(true);
@@ -85,7 +114,7 @@ describe("course material worker pipeline", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
     vi.stubEnv("EMBEDDING_PROVIDER", "fake");
     const pool = fakePool({ failPageRead: true });
-    const embeddings: EmbeddingProvider = { embed: async ({ texts }) => texts.map(() => Array(768).fill(0.25)) };
+    const embeddings: EmbeddingProvider = { modelId: "fake-v1", embed: async ({ texts }) => texts.map(() => Array(768).fill(0.25)) };
     const dependencies = { pool, embeddings, generation: fakeGeneration(), signal: new AbortController().signal };
 
     await expect(processCourseMaterial(job, dependencies)).rejects.toThrow("temporary database issue");
@@ -106,7 +135,7 @@ describe("course material worker pipeline", () => {
     vi.stubEnv("EMBEDDING_PROVIDER", "fake");
     vi.spyOn(console, "error").mockImplementation(() => {});
     const pool = fakePool({ failPageRead: true });
-    const embeddings: EmbeddingProvider = { embed: async ({ texts }) => texts.map(() => Array(768).fill(0.25)) };
+    const embeddings: EmbeddingProvider = { modelId: "fake-v1", embed: async ({ texts }) => texts.map(() => Array(768).fill(0.25)) };
     const dependencies = { pool, embeddings, generation: fakeGeneration() };
     const signal = new AbortController().signal;
 

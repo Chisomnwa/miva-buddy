@@ -10,6 +10,10 @@ function validVectors(value: unknown, expectedCount: number): value is number[][
 }
 
 export class OllamaEmbeddingProvider implements EmbeddingProvider {
+  get modelId() {
+    return this.model;
+  }
+
   constructor(
     private readonly baseUrl: string,
     private readonly model: string,

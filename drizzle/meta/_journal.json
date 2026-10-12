@@ -71,6 +71,13 @@
       "when": 1791684652413,
       "tag": "0009_remoteok_request_budget",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791691200000,
+      "tag": "0010_embedding_model_retrieval_filter",
+      "breakpoints": true
     }
   ]
 }

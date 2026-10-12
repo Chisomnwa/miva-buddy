@@ -46,4 +46,16 @@ describe("server environment configuration", () => {
     expect(config.AI_PROVIDER).toBe("gemini");
     expect(config.GEMINI_API_KEY).toBeUndefined();
   });
+
+  it("accepts explicit Gemini embeddings and uses the documented model by default", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+    vi.stubEnv("EMBEDDING_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_EMBEDDING_MODEL", undefined);
+
+    expect(getServerConfig()).toMatchObject({
+      EMBEDDING_PROVIDER: "gemini",
+      GEMINI_EMBEDDING_MODEL: "gemini-embedding-2",
+    });
+  });
 });

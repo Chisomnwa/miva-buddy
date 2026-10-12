@@ -1,9 +1,11 @@
 export type EmbeddingInput = {
   texts: string[];
   signal: AbortSignal;
+  task?: "document" | "query";
 };
 
 export interface EmbeddingProvider {
+  readonly modelId: string;
   embed(input: EmbeddingInput): Promise<number[][]>;
 }
 

@@ -6,6 +6,7 @@ import { GroqGenerationProvider } from "@/server/ai/providers/groq";
 import { OllamaGenerationProvider } from "@/server/ai/providers/ollama";
 import { FakeGenerationProvider } from "@/server/ai/providers/fake";
 import { OllamaEmbeddingProvider } from "@/server/embeddings/providers/ollama";
+import { GeminiEmbeddingProvider } from "@/server/embeddings/providers/gemini";
 import { FakeEmbeddingProvider } from "@/server/embeddings/providers/fake";
 import { getDatabasePool } from "@/server/persistence/pool";
 import { MATERIAL_JOB_RETRY_LIMIT, MATERIAL_PROCESSING_QUEUE } from "@/server/queue/material-jobs";
@@ -27,9 +28,14 @@ const generation = config.AI_PROVIDER === "gemini"
     : config.AI_PROVIDER === "ollama"
       ? new OllamaGenerationProvider(config.OLLAMA_BASE_URL, config.OLLAMA_MODEL)
       : new FakeGenerationProvider();
-const embeddings = config.EMBEDDING_PROVIDER === "ollama"
-  ? new OllamaEmbeddingProvider(config.OLLAMA_BASE_URL, config.OLLAMA_EMBEDDING_MODEL)
-  : new FakeEmbeddingProvider();
+if (config.EMBEDDING_PROVIDER === "gemini" && !config.GEMINI_API_KEY) {
+  throw new Error("Hosted embedding provider is not configured");
+}
+const embeddings = config.EMBEDDING_PROVIDER === "gemini"
+  ? new GeminiEmbeddingProvider(config.GEMINI_API_KEY ?? "", config.GEMINI_EMBEDDING_MODEL)
+  : config.EMBEDDING_PROVIDER === "ollama"
+    ? new OllamaEmbeddingProvider(config.OLLAMA_BASE_URL, config.OLLAMA_EMBEDDING_MODEL)
+    : new FakeEmbeddingProvider();
 const pool = getDatabasePool();
 const boss = new PgBoss({ connectionString: config.DATABASE_URL, application_name: "miva-buddy-worker" });
 boss.on("error", (error) => {

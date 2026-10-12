@@ -31,7 +31,7 @@ export async function retrieveCourseEvidence(
   const provider = createEmbeddingProvider();
   let vectors: number[][];
   try {
-    vectors = await provider.embed({ texts: [input.question], signal: input.signal });
+    vectors = await provider.embed({ texts: [input.question], signal: input.signal, task: "query" });
   } catch {
     throw new CourseRetrievalUnavailableError();
   }
@@ -39,11 +39,13 @@ export async function retrieveCourseEvidence(
     throw new CourseRetrievalUnavailableError();
   }
   const vector = `[${vectors[0].join(",")}]`;
+  const embeddingModel = provider.modelId;
   async function search(materialId: string | null): Promise<RetrievedCourseChunk[]> {
     const { data, error } = await supabase.rpc("search_course_material_chunks", {
       p_course_id: input.courseId,
       p_query_text: input.question,
       p_query_embedding: vector,
+      p_embedding_model: embeddingModel,
       p_material_id: materialId,
       p_concept_id: input.conceptId,
       p_limit: maxEvidenceChunks,

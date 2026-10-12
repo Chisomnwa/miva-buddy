@@ -5,6 +5,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { getServerConfig } from "@/lib/config";
 import { FakeEmbeddingProvider } from "@/server/embeddings/providers/fake";
+import { GeminiEmbeddingProvider } from "@/server/embeddings/providers/gemini";
 import { OllamaEmbeddingProvider } from "@/server/embeddings/providers/ollama";
 
 loadEnvConfig(process.cwd());
@@ -38,9 +39,12 @@ async function seedReadyCourse(userId: string) {
     const config = getServerConfig();
     const embeddingProvider = config.EMBEDDING_PROVIDER === "fake"
       ? new FakeEmbeddingProvider()
-      : new OllamaEmbeddingProvider(config.OLLAMA_BASE_URL, config.OLLAMA_EMBEDDING_MODEL);
+      : config.EMBEDDING_PROVIDER === "gemini"
+        ? new GeminiEmbeddingProvider(config.GEMINI_API_KEY ?? "", config.GEMINI_EMBEDDING_MODEL)
+        : new OllamaEmbeddingProvider(config.OLLAMA_BASE_URL, config.OLLAMA_EMBEDDING_MODEL);
     const [vector] = await embeddingProvider.embed({
       texts: [syntheticPassage], signal: AbortSignal.timeout(20_000),
+      task: "document",
     });
     if (!vector || vector.length !== 768) throw new Error("Synthetic fixture embedding failed its dimension check.");
     const vectorLiteral = `[${vector.join(",")}]`;
@@ -64,7 +68,7 @@ async function seedReadyCourse(userId: string) {
       `insert into public.material_chunks
         (id,user_id,course_id,material_id,ordinal,page_start,page_end,content,embedding,embedding_model)
        values ($1,$2,$3,$4,0,1,1,$5,$6::extensions.vector,$7)`,
-      [chunkId, userId, courseId, materialId, syntheticPassage, vectorLiteral, "fake-v1"],
+      [chunkId, userId, courseId, materialId, syntheticPassage, vectorLiteral, embeddingProvider.modelId],
     );
     await pool.query(
       `insert into public.course_concepts
@@ -78,7 +82,7 @@ async function seedReadyCourse(userId: string) {
       [userId, materialId, conceptId, chunkId],
     );
     await pool.query("commit");
-    return { pool, courseId, materialId, conceptId, chunkId };
+    return { pool, courseId, materialId, conceptId, chunkId, embeddingModel: embeddingProvider.modelId };
   } catch (error) {
     await pool.query("rollback").catch(() => {});
     await pool.end();
@@ -87,7 +91,7 @@ async function seedReadyCourse(userId: string) {
 }
 
 async function assertOtherUserCannotReadGroundedData(
-  pool: Pool, input: { courseId: string; conversationId: string; chunkId: string },
+  pool: Pool, input: { courseId: string; conversationId: string; chunkId: string; embeddingModel: string },
 ) {
   const client = await pool.connect();
   try {
@@ -98,8 +102,8 @@ async function assertOtherUserCannotReadGroundedData(
     const source = await client.query("select id from public.material_chunks where id=$1", [input.chunkId]);
     const retrieval = await client.query(
       `select count(*)::int as count from public.search_course_material_chunks(
-        $1,'binary search tree smaller values',array_fill(0.01::real,array[768])::extensions.vector(768),null,null,8)`,
-      [input.courseId],
+        $1,'binary search tree smaller values',array_fill(0.01::real,array[768])::extensions.vector(768),$2,null,null,8)`,
+      [input.courseId, input.embeddingModel],
     );
     expect(conversation.rowCount).toBe(0);
     expect(source.rowCount).toBe(0);
@@ -201,7 +205,12 @@ test("a grounded Learn answer cites and opens its owned source, then restores th
     const conversationId = new URL(page.url()).searchParams.get("conversationId");
     if (!conversationId) throw new Error("Grounded conversation did not persist its context.");
 
-    await assertOtherUserCannotReadGroundedData(pool, { courseId: fixture.courseId, conversationId, chunkId: fixture.chunkId });
+    await assertOtherUserCannotReadGroundedData(pool, {
+      courseId: fixture.courseId,
+      conversationId,
+      chunkId: fixture.chunkId,
+      embeddingModel: fixture.embeddingModel,
+    });
     const groundedUrl = page.url();
     await page.reload();
     await expect(page).toHaveURL(groundedUrl);
