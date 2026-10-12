@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { chunkMaterialPages } from "@/server/ingestion/chunking";
-import { extractPdfPages, PdfMaterialError, validatePdfPageCount } from "@/server/ingestion/pdf-extraction";
+import { classifyPdfParserFailure, extractPdfPages, PdfMaterialError, validatePdfPageCount } from "@/server/ingestion/pdf-extraction";
+import { InvalidPDFException, PasswordException } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { MAX_PDF_BYTES, courseInputSchema, materialNotesInputSchema, pdfFileMetadataError } from "@/contracts/course-material";
 
 function makeTextPdf(text: string) {
@@ -92,6 +93,7 @@ describe("course material contracts and source-preserving preparation", () => {
   });
 
   it("accepts the page limit and rejects the next page before material persistence", async () => {
+    expect(await validatePdfPageCount(makeTextPdf("One-page preflight content."))).toBe(1);
     expect(await validatePdfPageCount(makePdfPages(Array.from({ length: 120 }, (_, index) => `Page ${index + 1} content.`))))
       .toBe(120);
     await expect(validatePdfPageCount(makePdfPages(Array.from({ length: 121 }, (_, index) => `Page ${index + 1} content.`))))
@@ -114,9 +116,23 @@ describe("course material contracts and source-preserving preparation", () => {
     expect(columns[0].content).toContain("Right column");
   });
 
+  it("classifies invalid PDFs, password-protected PDFs, and parser failures without exposing details", () => {
+    expect(classifyPdfParserFailure(new InvalidPDFException("sensitive parser detail")).code).toBe("invalid_pdf");
+    expect(classifyPdfParserFailure(new PasswordException("sensitive parser detail", 1)).code).toBe("password_protected_pdf");
+    const parserFailure = classifyPdfParserFailure(new Error("sensitive parser detail"));
+    expect(parserFailure.code).toBe("pdf_parser_failure");
+    expect(parserFailure.message).not.toContain("sensitive parser detail");
+    expect(classifyPdfParserFailure(new TypeError("runtime detail")).diagnosticCause).toBe("type_error");
+    expect(parserFailure.diagnosticCause).toBe("other_error");
+    expect(classifyPdfParserFailure(new Error("Setting up fake worker failed: private path"))
+      .diagnosticCause).toBe("pdfjs_worker_setup_failure");
+    expect(classifyPdfParserFailure(new Error('No "GlobalWorkerOptions.workerSrc" specified.'))
+      .diagnosticCause).toBe("pdfjs_worker_source_missing");
+  });
+
   it("rejects corrupt and image-only or text-empty PDFs with safe failure codes", async () => {
     await expect(extractPdfPages(new Uint8Array([1, 2, 3])))
-      .rejects.toMatchObject({ code: "unreadable_pdf" });
+      .rejects.toMatchObject({ code: "invalid_pdf" });
     await expect(extractPdfPages(makeTextPdf("")))
       .rejects.toMatchObject({ code: "no_extractable_text" });
     await expect(extractPdfPages(makeImageOnlyPdf()))

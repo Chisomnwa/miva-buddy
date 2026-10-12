@@ -1,14 +1,64 @@
-import { getDocument, type PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
+import {
+  getDocument,
+  InvalidPDFException,
+  PasswordException,
+  type PDFDocumentProxy,
+} from "pdfjs-dist/legacy/build/pdf.mjs";
 import { MAX_MATERIAL_TEXT_CHARACTERS, MAX_PDF_BYTES, MAX_PDF_PAGES } from "@/contracts/course-material";
 import type { PageText } from "./chunking";
 
-export type PdfFailureCode = "file_too_large" | "too_many_pages" | "text_too_large" | "unreadable_pdf" | "no_extractable_text";
+export type PdfFailureCode =
+  | "file_too_large"
+  | "too_many_pages"
+  | "text_too_large"
+  | "unreadable_pdf"
+  | "invalid_pdf"
+  | "password_protected_pdf"
+  | "pdf_parser_failure"
+  | "no_extractable_text";
+
+export type PdfParserDiagnosticCause =
+  | "invalid_pdf_exception"
+  | "password_exception"
+  | "pdfjs_unknown_error"
+  | "pdfjs_response_error"
+  | "pdfjs_format_error"
+  | "pdfjs_worker_setup_failure"
+  | "pdfjs_worker_source_missing"
+  | "type_error"
+  | "reference_error"
+  | "range_error"
+  | "other_error"
+  | "non_error_throwable";
 
 export class PdfMaterialError extends Error {
-  constructor(readonly code: PdfFailureCode) {
+  constructor(readonly code: PdfFailureCode, readonly diagnosticCause?: PdfParserDiagnosticCause) {
     super("Course PDF could not be processed");
     this.name = "PdfMaterialError";
   }
+}
+
+/** Classify parser failures with fixed codes; never retain PDF.js messages or details. */
+export function classifyPdfParserFailure(error: unknown): PdfMaterialError {
+  if (error instanceof PdfMaterialError) return error;
+  if (error instanceof InvalidPDFException) return new PdfMaterialError("invalid_pdf", "invalid_pdf_exception");
+  if (error instanceof PasswordException) return new PdfMaterialError("password_protected_pdf", "password_exception");
+  if (!(error instanceof Error)) return new PdfMaterialError("pdf_parser_failure", "non_error_throwable");
+  if (error.message.startsWith("Setting up fake worker failed:")) {
+    return new PdfMaterialError("pdf_parser_failure", "pdfjs_worker_setup_failure");
+  }
+  if (error.message === 'No "GlobalWorkerOptions.workerSrc" specified.') {
+    return new PdfMaterialError("pdf_parser_failure", "pdfjs_worker_source_missing");
+  }
+  const knownCauses: Record<string, PdfParserDiagnosticCause> = {
+    UnknownErrorException: "pdfjs_unknown_error",
+    ResponseException: "pdfjs_response_error",
+    FormatError: "pdfjs_format_error",
+    TypeError: "type_error",
+    ReferenceError: "reference_error",
+    RangeError: "range_error",
+  };
+  return new PdfMaterialError("pdf_parser_failure", knownCauses[error.name] ?? "other_error");
 }
 
 /** Parse only the document structure so uploads over the page limit can be rejected before persistence. */
@@ -23,8 +73,7 @@ export async function validatePdfPageCount(bytes: Uint8Array): Promise<number> {
     if (document.numPages > MAX_PDF_PAGES) throw new PdfMaterialError("too_many_pages");
     return document.numPages;
   } catch (error) {
-    if (error instanceof PdfMaterialError) throw error;
-    throw new PdfMaterialError("unreadable_pdf");
+    throw classifyPdfParserFailure(error);
   } finally {
     await loading.destroy().catch(() => {});
   }
@@ -65,8 +114,7 @@ export async function extractPdfPages(bytes: Uint8Array): Promise<PageText[]> {
     }
     return pages;
   } catch (error) {
-    if (error instanceof PdfMaterialError) throw error;
-    throw new PdfMaterialError("unreadable_pdf");
+    throw classifyPdfParserFailure(error);
   } finally {
     await loading.destroy().catch(() => {});
   }

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // PDF.js loads its Node fake worker by a package-relative dynamic import.
+  // Keep the package external so the worker remains resolvable beside pdf.mjs.
+  serverExternalPackages: ["pdfjs-dist"],
   experimental: { serverActions: { bodySizeLimit: "11mb" } },
   turbopack: {
     root: process.cwd(),

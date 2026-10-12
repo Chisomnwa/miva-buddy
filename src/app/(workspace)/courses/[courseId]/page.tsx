@@ -12,6 +12,9 @@ const failureMessages: Record<string, string> = {
   too_many_pages: "This PDF has more pages than the supported limit.",
   text_too_large: "This file contains more text than can be processed at once.",
   unreadable_pdf: "This file could not be read as a PDF. Try another copy or paste the notes.",
+  invalid_pdf: "This PDF has an invalid file structure. Try another copy or paste the notes.",
+  password_protected_pdf: "This PDF is password-protected. Remove its password or paste the notes.",
+  pdf_parser_failure: "Our PDF reader could not process this file. Try another copy or paste the notes.",
   structured_processing_failed: "We couldn't reliably identify concepts in this material. Please try again later or paste the notes.",
 };
 

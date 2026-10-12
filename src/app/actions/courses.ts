@@ -12,6 +12,19 @@ import { removeFailedMaterial } from "@/server/courses/remove-failed-material";
 
 export type CourseFormResult = { error: string | null };
 
+type PdfUploadDiagnosticStage = "storage_upload" | "material_insert" | "storage_cleanup" | "signed_url" | "queue_create" | "queue_status_update";
+type PdfUploadDiagnosticCategory =
+  | "operation_rejected"
+  | "operation_threw"
+  | "cleanup_rejected"
+  | "cleanup_threw";
+
+function logPdfUploadDiagnostic(stage: PdfUploadDiagnosticStage, category: PdfUploadDiagnosticCategory) {
+  if (process.env.NODE_ENV === "development") {
+    console.warn("pdf_upload_diagnostic", { stage, category });
+  }
+}
+
 const formString = (data: FormData, key: string) => {
   const value = data.get(key);
   return typeof value === "string" ? value : "";
@@ -92,47 +105,107 @@ export async function uploadPdfAction(_previous: CourseFormResult, data: FormDat
   let pdfBytes: Uint8Array;
   try {
     pdfBytes = new Uint8Array(await file.arrayBuffer());
+  } catch {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("pdf_upload_validation_diagnostic", {
+        stage: "file_read",
+        category: "file_read_failure",
+        cause: "array_buffer_rejected",
+      });
+    }
+    return { error: "We couldn't read the selected PDF file. Please choose it again or try another PDF." };
+  }
+  try {
     await validatePdfPageCount(pdfBytes);
   } catch (error) {
+    if (error instanceof PdfMaterialError && process.env.NODE_ENV === "development") {
+      console.warn("pdf_upload_validation_diagnostic", {
+        stage: "page_count",
+        category: error.code,
+        cause: error.diagnosticCause ?? "validation_rejected",
+      });
+    }
     if (error instanceof PdfMaterialError && error.code === "too_many_pages") {
       return { error: "This PDF has more than the supported 120 pages. Choose a shorter PDF." };
     }
     if (error instanceof PdfMaterialError && error.code === "file_too_large") {
       return { error: "This PDF is larger than the 10 MiB limit." };
     }
-    return { error: "This PDF could not be read. Choose a valid PDF or paste your notes instead." };
+    if (error instanceof PdfMaterialError && error.code === "invalid_pdf") {
+      return { error: "This PDF has an invalid file structure. Choose another PDF or paste your notes instead." };
+    }
+    if (error instanceof PdfMaterialError && error.code === "password_protected_pdf") {
+      return { error: "This PDF is password-protected. Remove its password or paste your notes instead." };
+    }
+    return { error: "Our PDF reader could not validate this file. Try another PDF or paste your notes instead." };
   }
   const materialId = randomUUID();
   const safeName = `${materialId}.pdf`;
   const storagePath = `${user.id}/${courseId}/${materialId}/${safeName}`;
-  const { error: uploadError } = await supabase.storage.from("course-materials").upload(storagePath, file, {
-    contentType: "application/pdf", upsert: false,
-  });
-  if (uploadError) return { error: "We couldn't upload this PDF. Please try again." };
-  const { error: materialError } = await supabase.from("course_materials").insert({
-    id: materialId, user_id: user.id, course_id: courseId, title,
-    kind: "pdf", status: "queued", storage_path: storagePath,
-  });
+  let uploadError: unknown;
+  try {
+    ({ error: uploadError } = await supabase.storage.from("course-materials").upload(storagePath, file, {
+      contentType: "application/pdf", upsert: false,
+    }));
+  } catch {
+    logPdfUploadDiagnostic("storage_upload", "operation_threw");
+    return { error: "We couldn't upload this PDF. Please try again." };
+  }
+  if (uploadError) {
+    logPdfUploadDiagnostic("storage_upload", "operation_rejected");
+    return { error: "We couldn't upload this PDF. Please try again." };
+  }
+  let materialError: unknown;
+  try {
+    ({ error: materialError } = await supabase.from("course_materials").insert({
+      id: materialId, user_id: user.id, course_id: courseId, title,
+      kind: "pdf", status: "queued", storage_path: storagePath,
+    }));
+  } catch {
+    materialError = true;
+  }
   if (materialError) {
-    await supabase.storage.from("course-materials").remove([storagePath]);
+    logPdfUploadDiagnostic("material_insert", materialError === true ? "operation_threw" : "operation_rejected");
+    try {
+      const { error: cleanupError } = await supabase.storage.from("course-materials").remove([storagePath]);
+      if (cleanupError) logPdfUploadDiagnostic("storage_cleanup", "cleanup_rejected");
+    } catch {
+      logPdfUploadDiagnostic("storage_cleanup", "cleanup_threw");
+    }
     return { error: "We couldn't add this PDF to the course. Please try again." };
   }
-  const { data: signed, error: signedError } = await supabase.storage.from("course-materials").createSignedUrl(storagePath, 21_600);
+  let signed: { signedUrl?: string } | null | undefined;
+  let signedError: unknown;
+  try {
+    ({ data: signed, error: signedError } = await supabase.storage.from("course-materials").createSignedUrl(storagePath, 21_600));
+  } catch {
+    signedError = true;
+  }
   if (signedError || !signed?.signedUrl) {
-    await getDatabasePool().query(
-      "update public.course_materials set status = 'failed', failure_code = 'storage_access_failed' where id = $1 and user_id = $2 and course_id = $3",
-      [materialId, user.id, courseId],
-    );
+    logPdfUploadDiagnostic("signed_url", signedError === true ? "operation_threw" : "operation_rejected");
+    try {
+      await getDatabasePool().query(
+        "update public.course_materials set status = 'failed', failure_code = 'storage_access_failed' where id = $1 and user_id = $2 and course_id = $3",
+        [materialId, user.id, courseId],
+      );
+    } catch {
+      logPdfUploadDiagnostic("signed_url", "operation_threw");
+    }
     revalidatePath(`/courses/${courseId}`);
     redirect(`/courses/${courseId}`);
   }
   try {
     await enqueueMaterialProcessing({ kind: "pdf", userId: user.id, courseId, materialId, signedUrl: signed.signedUrl });
   } catch {
-    await getDatabasePool().query(
-      "update public.course_materials set status = 'failed', failure_code = 'queue_unavailable' where id = $1 and user_id = $2 and course_id = $3",
-      [materialId, user.id, courseId],
-    );
+    logPdfUploadDiagnostic("queue_create", "operation_threw");
+    try {
+      await getDatabasePool().query(
+        "update public.course_materials set status = 'failed', failure_code = 'queue_unavailable' where id = $1 and user_id = $2 and course_id = $3",
+        [materialId, user.id, courseId],
+      );
+    } catch {
+      logPdfUploadDiagnostic("queue_status_update", "operation_threw");
+    }
   }
   revalidatePath(`/courses/${courseId}`);
   redirect(`/courses/${courseId}`);
