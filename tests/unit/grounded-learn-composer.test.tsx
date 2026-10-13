@@ -15,8 +15,8 @@ describe("GroundedLearnComposer voice input", () => {
     expect(html).toContain('id="grounded-learn-message"');
     expect(html).toContain('type="button"');
     expect(html).toContain("Start voice input");
-    expect(html).toContain("Browser speech recognition may use your browser vendor’s speech service.");
-    expect(html).toContain("Miva Buddy does not record or store raw audio.");
+    expect(html).not.toContain("Browser speech recognition may use your browser vendor’s speech service.");
+    expect(html).not.toContain("Miva Buddy does not record or store raw audio.");
     expect(html.indexOf("Start voice input")).toBeLessThan(html.indexOf(">Send</button>"));
     expect(html).toContain(">Send</button>");
   });

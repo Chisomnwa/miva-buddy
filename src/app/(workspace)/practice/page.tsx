@@ -16,7 +16,7 @@ export default async function PracticePage() {
     return problem ? [{ id: session.id, title: problem.title, difficulty: problem.difficulty, mode: session.mode }] : [];
   });
   return <section className="simple-page practice-page">
-    <p className="eyebrow">PRACTICE · DATA STRUCTURES & ALGORITHMS</p>
+    <p className="eyebrow warm-brand-eyebrow">PRACTICE · DATA STRUCTURES & ALGORITHMS</p>
     <h1>Choose a path to practise</h1>
     <p className="intro-copy">Explore curated problems across 14 DSA patterns, from first steps to more challenging techniques. Solve on LeetCode and return here for guided practice.</p>
     <PracticeResumeSection items={resumableSessions} />

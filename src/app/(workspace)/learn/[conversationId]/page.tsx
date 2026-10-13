@@ -29,7 +29,7 @@ export default async function LearnConversationPage({ params, searchParams }: Le
       )}
       <LearnConversation messages={result.messages} />
       <div className="learning-disclosure" role="note">
-        Your message and up to 8 recent messages from this conversation may be sent to the configured AI provider. Avoid sharing sensitive personal information.
+        Avoid sharing sensitive personal information.
       </div>
       <LearnComposer conversationId={conversationId} suggestions={lastAssistant?.follow_up_questions ?? []} />
     </section>

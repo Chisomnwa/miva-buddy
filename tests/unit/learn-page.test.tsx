@@ -20,9 +20,11 @@ describe("Learn landing page", () => {
 
     expect(html).toContain("Avoid sharing sensitive personal information.");
     expect(html).not.toContain("Your question and a limited amount of recent conversation");
-    expect(html).toContain("General explanation");
-    expect(html).toContain("No course material is attached to this conversation.");
+    expect(html).not.toContain("General explanation");
+    expect(html).not.toContain("No course material is attached to this conversation.");
     expect(html).toContain("Learn with your notes");
+    expect(html).toContain('class="eyebrow warm-brand-eyebrow">YOUR COURSE MATERIAL</p>');
+    expect(html).toContain('<a class="button button-warning" href="/courses">Browse Courses <span aria-hidden="true">→</span></a>');
     expect(html).toContain("Ask a question about a company, role, or interview stage. Preparation is general guidance; external searches are not verified candidate experiences.");
 
     const questionCard = html.slice(html.indexOf('aria-labelledby="learn-ask-heading"'));
@@ -30,5 +32,9 @@ describe("Learn landing page", () => {
     expect(questionCard.indexOf("Preparing for an interview?")).toBeLessThan(questionCard.indexOf("Try a question"));
     expect(questionCard).toContain('id="learn-message"');
     expect(questionCard).toContain("Start voice input");
+    expect(questionCard).not.toContain("Browser speech recognition may use your browser vendor’s speech service");
+    expect(questionCard).toContain(">Send</button>");
+    expect(html.indexOf("Learn with your notes")).toBeLessThan(html.indexOf("Ask a general question"));
+    expect(html).toContain('class="eyebrow">LEARN</p>');
   });
 });

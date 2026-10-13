@@ -38,28 +38,28 @@ export default async function HomePage() {
   return (
     <>
       <section className="welcome-block">
-        <p className="eyebrow">YOUR LEARNING COMPANION</p>
+        <p className="eyebrow warm-brand-eyebrow">YOUR LEARNING COMPANION</p>
         <h1>{firstName ? `Good to see you, ${firstName}.` : "What would you like to learn today?"}</h1>
         <p className="intro-copy">A steady place to understand your coursework and practise what matters.</p>
         <Link className="button button-primary" href="/learn">Ask a question <span aria-hidden="true">→</span></Link>
       </section>
       <section className="home-grid" aria-label="Ways to get started">
         <article className="start-card">
-          <span className="card-symbol card-symbol-red" aria-hidden="true">01</span>
+          <span className="card-symbol card-symbol-warning" aria-hidden="true">01</span>
           <p className="eyebrow">LEARN</p>
           <h2>Understand a concept</h2>
           <p>Ask a question now, or continue a conversation you started earlier.</p>
           <Link className="text-link" href="/learn">Go to Learn <span aria-hidden="true">→</span></Link>
         </article>
         <article className="start-card">
-          <span className="card-symbol card-symbol-red" aria-hidden="true">02</span>
+          <span className="card-symbol card-symbol-warning" aria-hidden="true">02</span>
           <p className="eyebrow">COURSES</p>
           <h2>Learn from your material</h2>
           <p>Keep notes and PDFs organized, then explore concepts with source references.</p>
           <Link className="text-link" href="/courses">Open Courses <span aria-hidden="true">→</span></Link>
         </article>
         <article className="start-card">
-          <span className="card-symbol card-symbol-red" aria-hidden="true">03</span>
+          <span className="card-symbol card-symbol-warning" aria-hidden="true">03</span>
           <p className="eyebrow">PRACTISE DSA</p>
           <h2>Build problem-solving confidence</h2>
           <p>Choose a curated problem and get help in the mode that feels right for you.</p>

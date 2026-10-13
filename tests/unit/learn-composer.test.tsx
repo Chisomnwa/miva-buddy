@@ -24,9 +24,11 @@ describe("LearnComposer", () => {
     expect(html).toContain("external searches are not verified candidate experiences.");
     expect(html).toContain('id="learn-message"');
     expect(html).toContain("Start voice input");
+    expect(html).not.toContain("Browser speech recognition may use your browser vendor’s speech service");
     expect(html).toContain("Up to 2,000 characters");
     expect(html).toContain(">Send</button>");
     expect(html).toContain("Explain recursion");
     expect(html).toContain("How do hash tables work?");
   });
+
 });

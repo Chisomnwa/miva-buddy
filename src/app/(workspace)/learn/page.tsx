@@ -14,15 +14,8 @@ export default async function LearnPage() {
       <h1>Understand something</h1>
       <p className="intro-copy">Start with a question, or choose a concept from your course material for answers with source references.</p>
       <div className="learn-route-card">
-        <div><p className="eyebrow">YOUR COURSE MATERIAL</p><h2>Learn with your notes</h2><p>Choose a ready concept in Courses to ask questions grounded in an uploaded PDF or pasted notes.</p></div>
-        <Link className="button button-secondary" href="/courses">Browse Courses <span aria-hidden="true">→</span></Link>
-      </div>
-      <div className="general-learning-label">
-        <span className="general-learning-dot" aria-hidden="true" />
-        <div>
-          <strong>General explanation</strong>
-          <p>No course material is attached to this conversation.</p>
-        </div>
+        <div><p className="eyebrow warm-brand-eyebrow">YOUR COURSE MATERIAL</p><h2>Learn with your notes</h2><p>Choose a ready concept in Courses to ask questions grounded in an uploaded PDF or pasted notes.</p></div>
+        <Link className="button button-warning" href="/courses">Browse Courses <span aria-hidden="true">→</span></Link>
       </div>
       <section className="learn-general-question-card" aria-labelledby="learn-ask-heading">
         <h2 className="learn-ask-heading" id="learn-ask-heading">Ask a general question</h2>

@@ -58,8 +58,9 @@ describe("Home activity lists", () => {
     const page = await HomePage();
     const html = renderToStaticMarkup(page);
 
+    expect(html).toContain('class="eyebrow warm-brand-eyebrow">YOUR LEARNING COMPANION</p>');
     for (const number of ["01", "02", "03"]) {
-      expect(html).toContain(`class="card-symbol card-symbol-red" aria-hidden="true">${number}</span>`);
+      expect(html).toContain(`class="card-symbol card-symbol-warning" aria-hidden="true">${number}</span>`);
     }
 
     expect(mockQueryLimits.get("practice_sessions")).toBe(10);

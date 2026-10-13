@@ -73,4 +73,13 @@ describe("Practice pattern disclosures", () => {
     const html = renderToStaticMarkup(<PracticePatternList sessions={[]} progressAvailable />);
     expect((html.match(/<summary class="practice-pattern-summary">/g) ?? [])).toHaveLength(PRACTICE_TOPICS.length);
   });
+
+  it("renders the existing description for every pattern without changing its content", () => {
+    const html = renderToStaticMarkup(<PracticePatternList sessions={[]} progressAvailable />);
+    const descriptions = html.match(/<p class="practice-pattern-description">.*?<\/p>/g) ?? [];
+
+    expect(descriptions).toHaveLength(14);
+    expect(descriptions).toContain("<p class=\"practice-pattern-description\">Build fluency with arrays, strings, and lookup structures.</p>");
+    expect(descriptions).toContain("<p class=\"practice-pattern-description\">Use coordinated positions to reason across sequences.</p>");
+  });
 });

@@ -82,7 +82,7 @@ export function PracticeCoach({ sessionId, initialMode, initialMessages, readOnl
         <label htmlFor="practice-attempt">Your attempt or relevant context <span>(up to 6,000 characters)</span></label>
         <textarea id="practice-attempt" value={attempt} maxLength={6000} rows={5} onChange={(event) => setAttempt(event.target.value)} placeholder="Paste only the part you want to discuss. Don’t include private information." />
       </details>
-      <div className="practice-composer-footer"><span>Your message and attempt are sent to the configured AI provider for this reply.</span><button className="button button-primary" type="submit" disabled={busy || !message.trim()}>{busy ? "Thinking…" : "Ask for coaching"}</button></div>
+      <div className="practice-composer-footer"><button className="button button-primary" type="submit" disabled={busy || !message.trim()}>{busy ? "Thinking…" : "Ask for coaching"}</button></div>
     </form>}
   </section>;
 }

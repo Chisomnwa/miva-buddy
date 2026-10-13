@@ -131,9 +131,6 @@ export function LearnVoiceInput({ value, disabled = false, onChange }: LearnVoic
       >
         {listening ? "Stop voice input" : unsupported ? "Voice input unavailable" : state === "processing" ? "Processing voice input…" : "Start voice input"}
       </button>
-      <span className="learn-voice-disclosure">
-        Browser speech recognition may use your browser vendor’s speech service. Miva Buddy does not record or store raw audio.
-      </span>
       {(statusMessage || unsupported) && (
         <p className="learn-voice-status" role="status" aria-live="polite">
           {statusMessage || "Voice input is not supported by this browser. You can still type your question."}
