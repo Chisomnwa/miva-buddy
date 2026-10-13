@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { saveProfileAction, type FormResult } from "@/app/actions/profile";
-import { careerInterestOptions } from "@/contracts/profile";
+import { careerInterestOptions, getStudentLevelDefault, studentLevelOptions } from "@/contracts/profile";
 
 const initialState: FormResult = { error: null };
 
@@ -36,9 +36,11 @@ export function ProfileForm({
       </label>
       <label className="field">
         <span>What level are you currently in?</span>
-        <select name="level" defaultValue={level || "100 Level"} required>
-          {[100, 200, 300, 400, 500, 600].map((n) => <option key={n}>{n} Level</option>)}
-          <option>Other</option>
+        <select name="level" defaultValue={getStudentLevelDefault(level)} required>
+          {level && !studentLevelOptions.some((option) => option === level) && (
+            <option value="" disabled>Choose a current level to update your saved profile</option>
+          )}
+          {studentLevelOptions.map((option) => <option key={option}>{option}</option>)}
         </select>
       </label>
       <fieldset className="interest-fieldset">
