@@ -45,7 +45,7 @@ export default async function HomePage() {
       </section>
       <section className="home-grid" aria-label="Ways to get started">
         <article className="start-card">
-          <span className="card-symbol" aria-hidden="true">01</span>
+          <span className="card-symbol card-symbol-red" aria-hidden="true">01</span>
           <p className="eyebrow">LEARN</p>
           <h2>Understand a concept</h2>
           <p>Ask a question now, or continue a conversation you started earlier.</p>
@@ -59,7 +59,7 @@ export default async function HomePage() {
           <Link className="text-link" href="/courses">Open Courses <span aria-hidden="true">→</span></Link>
         </article>
         <article className="start-card">
-          <span className="card-symbol" aria-hidden="true">03</span>
+          <span className="card-symbol card-symbol-red" aria-hidden="true">03</span>
           <p className="eyebrow">PRACTISE DSA</p>
           <h2>Build problem-solving confidence</h2>
           <p>Choose a curated problem and get help in the mode that feels right for you.</p>

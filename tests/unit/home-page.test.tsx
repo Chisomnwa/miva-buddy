@@ -58,6 +58,10 @@ describe("Home activity lists", () => {
     const page = await HomePage();
     const html = renderToStaticMarkup(page);
 
+    for (const number of ["01", "02", "03"]) {
+      expect(html).toContain(`class="card-symbol card-symbol-red" aria-hidden="true">${number}</span>`);
+    }
+
     expect(mockQueryLimits.get("practice_sessions")).toBe(10);
     expect(mockQueryOrders.get("practice_sessions")).toContainEqual(["updated_at", { ascending: false }]);
     expect(mockGetRecent).toHaveBeenCalledWith("student-1", 6);
