@@ -45,8 +45,13 @@ a { color: inherit; }
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 3px solid var(--blue-500); outline-offset: 3px; }
 
-.brand-lockup { display: inline-flex; align-items: center; gap: 10px; color: var(--navy-950); font-weight: 700; letter-spacing: -0.025em; text-decoration: none; }
-.brand-symbol { display: inline-block; width: 40px; height: 38px; flex: 0 0 auto; background: url('/brand/miva-logo.png') left center / auto 100% no-repeat; }
+.brand-lockup { display: flex; width: fit-content; max-width: 100%; align-items: center; text-decoration: none; }
+.brand-wordmark { display: block; width: min(100%, 250px); height: auto; flex: 0 1 auto; }
+.brand-product-lockup { display: flex; width: min(100%, 178px); aspect-ratio: 178 / 46; align-items: center; justify-content: flex-start; gap: 1.5%; container-type: inline-size; }
+.brand-product-symbol { width: 27.2%; height: 100%; flex: 0 0 27.2%; background-color: transparent; background-image: url('/brand/miva-logo.png'); background-repeat: no-repeat; background-position: left center; background-size: 100cqw 25.84cqw; }
+.brand-product-type { display: flex; width: 50%; height: 100%; flex: 0 0 50%; flex-direction: column; justify-content: center; gap: 3px; }
+.brand-product-miva { display: block; width: 100%; height: 36%; background-image: url('/brand/miva-wordmark.png'); background-repeat: no-repeat; background-position: center; background-size: auto 100%; }
+.brand-product-name { color: var(--navy-900); font-size: clamp(16px, 9.8cqw, 18px); font-weight: 700; letter-spacing: .08em; line-height: 1; text-align: center; }
 .eyebrow { margin: 0 0 10px; color: var(--slate-500); font-size: 12px; font-weight: 700; letter-spacing: .12em; line-height: 1.4; }
 h1, h2, p { margin-top: 0; }
 h1, h2 { color: var(--navy-950); letter-spacing: -.035em; }
@@ -62,8 +67,9 @@ h2 { margin-bottom: 10px; font-size: 21px; font-weight: 650; line-height: 1.3; }
 .recovery-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .workspace-error { margin: 4vh auto; }
 .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 5; display: flex; width: 248px; flex-direction: column; padding: 29px 18px 20px; background: var(--navy-900); color: white; }
-.sidebar .brand-lockup { padding: 0 8px; color: white; font-size: 17px; }
-.sidebar .brand-symbol { border-radius: 6px; background-color: white; background-size: auto 90%; background-position: 2px center; }
+.sidebar .brand-lockup { width: 100%; padding: 0 8px; }
+.sidebar .brand-product-miva { filter: brightness(0) invert(1); }
+.sidebar .brand-product-name { color: rgb(255 255 255 / 88%); }
 .side-links { display: grid; gap: 6px; margin-top: 54px; }
 .nav-link { position: relative; display: flex; min-height: 46px; align-items: center; gap: 12px; padding: 9px 13px; border-radius: 8px; color: rgb(255 255 255 / 76%); font-size: 14px; font-weight: 550; text-decoration: none; transition: background-color .16s ease, color .16s ease; }
 .nav-link:hover { background: rgb(255 255 255 / 9%); color: white; }
@@ -299,7 +305,7 @@ h2 { margin-bottom: 10px; font-size: 21px; font-weight: 650; line-height: 1.3; }
 .onboarding-card, .setup-card { width: min(100%, 458px); padding: 38px; border: 1px solid var(--slate-200); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-soft); }
 .onboarding-card h1, .setup-card h1 { font-size: 30px; }
 .onboarding-card .intro-copy, .setup-card .intro-copy { margin-bottom: 25px; font-size: 15px; }
-.onboarding-card .brand-lockup, .setup-card .brand-lockup { margin-bottom: 24px; font-size: 18px; }
+.onboarding-card .brand-lockup, .setup-card .brand-lockup { width: min(100%, 250px); margin-bottom: 32px; }
 .onboarding-note { margin: 22px 0 0; color: var(--slate-500); font-size: 12px; line-height: 1.55; }
 .form-stack { display: grid; gap: 18px; }
 .form-intro { margin: 0; color: var(--slate-700); font-size: 13px; }

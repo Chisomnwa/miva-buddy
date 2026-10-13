@@ -29,13 +29,13 @@ export function AppNavigation() {
   return (
     <>
       <aside className="sidebar" aria-label="Primary navigation">
-        <BrandLockup linked />
+        <BrandLockup linked variant="product" />
         <nav className="side-links"><NavItems /></nav>
         <Link className="profile-link" href="/profile">Profile &amp; settings</Link>
         <form action={signOutAction} className="sign-out-form"><button className="sign-out-button" type="submit">Sign out</button></form>
       </aside>
       <header className="mobile-header">
-        <BrandLockup linked />
+        <BrandLockup linked variant="product" />
         <div className="mobile-account-actions">
           <Link className="mobile-profile" href="/profile" aria-label="Profile and settings">Profile</Link>
           <form action={signOutAction}><button className="sign-out-button" type="submit">Sign out</button></form>

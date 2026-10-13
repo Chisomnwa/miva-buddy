@@ -5,11 +5,23 @@ import { MessageContent } from "@/components/message-content";
 import { latestPracticeStateByProblem } from "@/lib/practice-session-display";
 
 describe("V1 interface boundaries", () => {
-  it("uses the supplied symbol slot with the student product name", () => {
+  it("uses the complete official Miva Open University wordmark", () => {
     const html = renderToStaticMarkup(<BrandLockup />);
-    expect(html).toContain('class="brand-symbol"');
-    expect(html).toContain("Miva Buddy");
-    expect(html).not.toContain(">m<");
+    expect(html).toContain('alt="Miva Open University"');
+    expect(html).toContain("miva-logo.png");
+    expect(html).toContain('width="1920"');
+    expect(html).toContain('height="497"');
+  });
+
+  it("uses the Miva Buddy product lockup in application navigation", () => {
+    const html = renderToStaticMarkup(<BrandLockup linked variant="product" />);
+    expect(html).toContain('aria-label="Miva Buddy home"');
+    expect(html).toContain('role="img"');
+    expect(html).toContain('aria-label="Miva Buddy"');
+    expect(html).toContain('class="brand-product-symbol"');
+    expect(html).toContain('class="brand-product-miva"');
+    expect(html).toContain('class="brand-product-name"');
+    expect(html).toContain(">Buddy</span>");
   });
 
   it("renders code legibly while escaping model-provided HTML", () => {
