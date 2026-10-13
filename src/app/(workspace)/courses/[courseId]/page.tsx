@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MaterialForms, RemoveFailedMaterialForm, RetryMaterialForm } from "@/components/course-forms";
 import { CourseProcessingRefresh } from "@/components/course-processing-refresh";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { displayCourseTitle } from "@/lib/course-title-display";
 
 const failureMessages: Record<string, string> = {
@@ -24,8 +24,7 @@ function statusLabel(status: string) {
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   if (!user) notFound();
   const { data: course, error: courseError } = await supabase.from("courses").select("id,title,course_code").eq("id", courseId).eq("user_id", user.id).maybeSingle();
   if (courseError) throw new Error("course_lookup_failed");

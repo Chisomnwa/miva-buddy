@@ -2,15 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { completePracticeSessionAction } from "@/app/actions/practice";
 import { PracticeCoach } from "@/components/practice-coach";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getNextPracticeProblem, getPracticeProblem, getPracticeTopic } from "@/server/practice/catalog";
 import { startPracticeSessionAction } from "@/app/actions/practice";
 
 export default async function PracticeSessionPage({ params, searchParams }: { params: Promise<{ sessionId: string }>; searchParams: Promise<{ notice?: string }> }) {
   const [{ sessionId }, query] = await Promise.all([params, searchParams]);
   if (!/^[0-9a-f-]{36}$/i.test(sessionId)) notFound();
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   if (!user) notFound();
   const { data: session, error: sessionError } = await supabase.from("practice_sessions")
     .select("id,problem_id,problem_slug,topic_id,mode,status,source_concept_id")

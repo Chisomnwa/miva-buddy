@@ -6,6 +6,7 @@ const { createClient, remoteSearch } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/same-origin", () => ({ isSameOriginRequest: () => true }));
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient }));
 vi.mock("@/lib/config", () => ({ getServerConfig: () => ({ AI_PROVIDER: "fake" }) }));
 vi.mock("@/server/ai/create-provider", () => ({ createGenerationProvider: () => ({}) }));
@@ -94,7 +95,7 @@ function supabaseMock() {
   });
 
   createClient.mockResolvedValue({
-    auth: { getUser: async () => ({ data: { user: { id: "00000000-0000-4000-8000-000000000006" } } }) },
+    auth: { getUser: async () => ({ data: { user: { id: "00000000-0000-4000-8000-000000000006", is_anonymous: false } } }) },
     from,
   });
   return { insertMessage };

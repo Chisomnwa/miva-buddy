@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import HomePage from "@/app/(workspace)/home/page";
+vi.mock("server-only", () => ({}));
 
 const { mockGetRecent, mockGetProfile, mockQueryLimits, mockQueryOrders } = vi.hoisted(() => ({
   mockGetRecent: vi.fn(),
@@ -11,7 +12,7 @@ const { mockGetRecent, mockGetProfile, mockQueryLimits, mockQueryOrders } = vi.h
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: "student-1", user_metadata: {} } } }) },
+    auth: { getUser: async () => ({ data: { user: { id: "student-1", is_anonymous: false, user_metadata: {} } } }) },
     from: (table: string) => {
       const query: Record<string, (...args: unknown[]) => unknown> = {};
       for (const method of ["select", "eq"]) query[method] = vi.fn(() => query);

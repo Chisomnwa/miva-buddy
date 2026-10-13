@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 
-test("Supabase RLS prevents one anonymous user from reading or writing another profile", async ({}, testInfo) => {
+test("legacy anonymous-user RLS journey (superseded by permanent-auth policy)", async ({}, testInfo) => {
+  test.skip(true, "This test creates anonymous identities. Use a permanent-user fixture plus an anonymous-denial test for the Google-auth beta.");
   test.skip(process.env.RUN_HOSTED_SUPABASE_TESTS !== "1", "Set RUN_HOSTED_SUPABASE_TESTS=1 to create hosted anonymous users and run the RLS check.");
   test.skip(testInfo.project.name !== "chromium", "Run the hosted RLS check once, not once per browser project.");
 

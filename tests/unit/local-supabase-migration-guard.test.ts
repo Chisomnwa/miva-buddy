@@ -256,7 +256,7 @@ describe("local Supabase migration safety guard", () => {
     const reordered = { ...journal, entries: [...journal.entries].reverse() };
     expect(() => validateDrizzleMigrationChain(reordered, migrationFiles)).toThrow();
     expect(() => validateDrizzleMigrationChain({ ...journal, entries: journal.entries.slice(0, -1) }, migrationFiles)).toThrow();
-    expect(() => validateDrizzleMigrationChain(journal, [...migrationFiles, "0011_unreviewed.sql"])).toThrow();
+    expect(() => validateDrizzleMigrationChain(journal, [...migrationFiles, "0012_unreviewed.sql"])).toThrow();
     expect(() => validateDrizzleMigrationChain(journal, migrationFiles.slice(1))).toThrow();
   });
 });

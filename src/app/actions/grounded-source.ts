@@ -1,15 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 
 const sourceIdSchema = z.uuid();
 
 export async function getGroundedSourceAction(sourceId: string) {
   const parsed = sourceIdSchema.safeParse(sourceId);
   if (!parsed.success) return { source: null, error: "This source isn't available." };
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   if (!user) return { source: null, error: "Your session expired. Refresh to continue." };
   const { data: chunk } = await supabase.from("material_chunks")
     .select("id,content,page_start,page_end,course_id,material_id")

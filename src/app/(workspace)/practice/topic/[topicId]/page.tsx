@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { startPracticeSessionAction } from "@/app/actions/practice";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getPracticeProblemsForTopic, getPracticeTopic } from "@/server/practice/catalog";
 import { latestPracticeStateByProblem } from "@/lib/practice-session-display";
 import { practiceDifficultySchema, type PracticeDifficulty } from "@/contracts/practice";
@@ -13,8 +13,7 @@ export default async function PracticeTopicPage({ params, searchParams }: {
   const [{ topicId }, query] = await Promise.all([params, searchParams]);
   const topic = getPracticeTopic(topicId);
   if (!topic) notFound();
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   let conceptId = "";
   if (query.conceptId && /^[0-9a-f-]{36}$/i.test(query.conceptId)) {
     if (user) {

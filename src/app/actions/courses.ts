@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { courseInputSchema, materialNotesInputSchema, pdfFileMetadataError } from "@/contracts/course-material";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getDatabasePool } from "@/server/persistence/pool";
 import { enqueueMaterialProcessing } from "@/server/queue/material-jobs";
 import { PdfMaterialError, validatePdfPageCount } from "@/server/ingestion/pdf-extraction";
@@ -31,9 +31,7 @@ const formString = (data: FormData, key: string) => {
 };
 
 async function currentUser() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return { supabase, user };
+  return getPermanentUser();
 }
 
 export async function createCourseAction(_previous: CourseFormResult, data: FormData): Promise<CourseFormResult> {

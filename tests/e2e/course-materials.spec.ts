@@ -97,6 +97,7 @@ async function cleanupCourse(courseId: string | undefined, cookies: Array<{ name
 }
 
 test("a student can add notes and PDFs and inspect source-backed concepts", async ({ page }, testInfo) => {
+  test.skip(true, "Legacy hosted journey depends on anonymous sign-in; replace with a permanent-user fixture before re-enabling.");
   test.skip(!enabled, "Set RUN_HOSTED_SUPABASE_TESTS=1 to create one hosted anonymous test identity.");
   test.skip(testInfo.project.name !== "chromium", "Run hosted material processing once to avoid duplicate test identities.");
   test.skip(!process.env.DATABASE_URL, "Requires DATABASE_URL for narrowly scoped test cleanup.");

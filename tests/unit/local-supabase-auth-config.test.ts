@@ -8,7 +8,11 @@ const supabaseConfig = readFileSync(
 const authSection = supabaseConfig.split(/^\[auth\]\s*$/m)[1]?.split(/^\[/m)[0] ?? "";
 
 describe("local Supabase Auth configuration", () => {
-  it("enables anonymous sign-in required by the onboarding profile save flow", () => {
-    expect(authSection).toMatch(/^enable_anonymous_sign_ins\s*=\s*true\s*$/m);
+  it("requires Google Auth and disables anonymous and email signups", () => {
+    expect(authSection).toMatch(/^enable_anonymous_sign_ins\s*=\s*false\s*$/m);
+    expect(supabaseConfig).toMatch(/\[auth\.email\][\s\S]*?enable_signup\s*=\s*false/);
+    expect(supabaseConfig.match(/^\[auth\.external\.google\]$/gm)).toHaveLength(1);
+    expect(supabaseConfig).toContain('client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"');
+    expect(supabaseConfig).toContain('secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET)"');
   });
 });

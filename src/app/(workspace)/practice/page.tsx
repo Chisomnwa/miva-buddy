@@ -1,11 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { PracticePatternList } from "@/components/practice-pattern-list";
 import { PracticeResumeSection } from "@/components/practice-resume-section";
 import { PRACTICE_CATALOG, getPracticeProblem } from "@/server/practice/catalog";
 
 export default async function PracticePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   const { data: sessions, error } = user ? await supabase.from("practice_sessions")
     .select("id,problem_slug,topic_id,mode,status,updated_at")
     .eq("user_id", user.id).in("problem_slug", PRACTICE_CATALOG.map((problem) => problem.slug))

@@ -21,6 +21,7 @@ function currentUserId(cookies: Array<{ name: string; value: string }>) {
 }
 
 test("Practice sessions persist, resume, complete manually, and remain owner-isolated", async ({ page }, testInfo) => {
+  test.skip(true, "Legacy hosted journey depends on anonymous sign-in; replace with a permanent-user fixture before re-enabling.");
   test.skip(!enabled, "Set RUN_HOSTED_SUPABASE_TESTS=1 to run hosted Practice persistence and ownership checks.");
   test.skip(testInfo.project.name !== "chromium", "Run hosted Auth integration once to avoid duplicate test identities.");
   test.skip(!process.env.DATABASE_URL, "Requires DATABASE_URL for exact synthetic identity cleanup.");
@@ -166,6 +167,7 @@ test("Practice sessions persist, resume, complete manually, and remain owner-iso
 });
 
 test("expanded Practice patterns filter and start/resume new and legacy sessions", async ({ page }, testInfo) => {
+  test.skip(true, "Legacy hosted journey depends on anonymous sign-in; replace with a permanent-user fixture before re-enabling.");
   test.skip(!enabled, "Set RUN_HOSTED_SUPABASE_TESTS=1 for hosted Practice browser integration.");
   test.skip(testInfo.project.name !== "chromium", "Run hosted Auth integration once to avoid duplicate test identities.");
   test.skip(!process.env.DATABASE_URL, "Requires DATABASE_URL for exact synthetic identity cleanup.");

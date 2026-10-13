@@ -62,7 +62,7 @@ describe("PDF upload server-side preflight", () => {
     mocks.storageRemove.mockResolvedValue({ error: null });
     mocks.table.mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) });
     mocks.createClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner-id" } } }) },
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner-id", is_anonymous: false } } }) },
       storage: { from: vi.fn(() => ({
         upload: mocks.upload,
         remove: mocks.storageRemove,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLockup } from "@/components/brand-lockup";
+import { signOutAction } from "@/app/actions/auth";
 
 const primaryLinks = [
   { href: "/home", label: "Home", icon: "⌂" },
@@ -31,10 +32,14 @@ export function AppNavigation() {
         <BrandLockup linked />
         <nav className="side-links"><NavItems /></nav>
         <Link className="profile-link" href="/profile">Profile &amp; settings</Link>
+        <form action={signOutAction} className="sign-out-form"><button className="sign-out-button" type="submit">Sign out</button></form>
       </aside>
       <header className="mobile-header">
         <BrandLockup linked />
-        <Link className="mobile-profile" href="/profile" aria-label="Profile and settings">Profile</Link>
+        <div className="mobile-account-actions">
+          <Link className="mobile-profile" href="/profile" aria-label="Profile and settings">Profile</Link>
+          <form action={signOutAction}><button className="sign-out-button" type="submit">Sign out</button></form>
+        </div>
       </header>
       <nav className="bottom-nav" aria-label="Primary navigation"><NavItems /></nav>
     </>

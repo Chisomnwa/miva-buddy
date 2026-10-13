@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { practiceCoachRequestSchema, practiceCoachResponseSchema } from "@/contracts/practice-coaching";
 import { isSameOriginRequest } from "@/lib/same-origin";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { createGenerationProvider } from "@/server/ai/create-provider";
 import { MalformedProviderOutputError } from "@/server/ai/provider";
 import { classifyPracticeRequest, evaluateModeRequest, isExplicitFullAnswerRequest } from "@/server/practice/coaching-policy";
@@ -48,8 +48,7 @@ export async function POST(request: Request) {
   const parsed = practiceCoachRequestSchema.safeParse(body);
   if (!parsed.success) return json({ error: "invalid_request" }, 400);
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   if (!user) return json({ error: "not_authenticated" }, 401);
 
   const { data: session, error: sessionError } = await supabase.from("practice_sessions")

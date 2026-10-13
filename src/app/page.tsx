@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getPublicSupabaseConfig } from "@/lib/config";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getProfile } from "@/lib/profile";
 import { BrandLockup } from "@/components/brand-lockup";
 
@@ -22,9 +22,8 @@ export default async function IndexPage() {
     );
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/onboarding");
+  const { user } = await getPermanentUser();
+  if (!user) redirect("/sign-in");
   const { data: profile } = await getProfile(user.id);
   redirect(profile?.programme ? "/home" : "/onboarding");
 }

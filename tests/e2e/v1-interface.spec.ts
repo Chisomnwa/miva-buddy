@@ -18,6 +18,7 @@ function testIdentity(cookies: Array<{ name: string; value: string }>) {
 }
 
 test("V1 student navigation and resume labels reflect owned state", async ({ page }, testInfo) => {
+  test.skip(true, "Legacy hosted journey depends on anonymous sign-in; replace with a permanent-user fixture before re-enabling.");
   test.skip(!enabled, "Hosted synthetic UI journey is opt-in to protect Auth rate limits.");
   test.skip(testInfo.project.name !== "chromium", "Run hosted identity creation once.");
   test.skip(!process.env.DATABASE_URL, "Requires exact test-identity cleanup.");

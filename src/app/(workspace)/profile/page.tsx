@@ -1,12 +1,12 @@
 import { ProfileForm } from "@/components/profile-form";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getProfile } from "@/lib/profile";
 
-export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
-  const { saved } = await searchParams;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile, error } = user ? await getProfile(user.id) : { data: null, error: null };
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ saved?: string; signOutError?: string }> }) {
+  const { saved, signOutError } = await searchParams;
+  const { user } = await getPermanentUser();
+  if (!user) redirect("/sign-in");
+  const { data: profile, error } = await getProfile(user.id);
   if (error) throw new Error("profile_lookup_failed");
 
   return (
@@ -15,10 +15,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <h1>Profile &amp; settings</h1>
       <p className="intro-copy">Keep your study details and interests up to date.</p>
       <div className="profile-card">
-        <p className="field-static-label">Your anonymous browser identity</p>
-        <p className="field-static-value">Your profile and learning data are stored online under this browser&apos;s anonymous identity. Clearing browser data may remove access; cross-device recovery is not available yet.</p>
+        <p className="field-static-label">Your account</p>
+        <p className="field-static-value">Your profile and learning data are stored privately with your signed-in Google account.</p>
         <hr />
         {saved === "1" && <p className="form-success" role="status">Profile changes saved.</p>}
+        {signOutError === "1" && <p className="form-error" role="alert">We couldn’t finish signing out. Please retry.</p>}
         <ProfileForm
           careerInterests={profile?.career_interests ?? []}
           level={profile?.level ?? ""}
@@ -30,3 +31,4 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     </section>
   );
 }
+import { redirect } from "next/navigation";

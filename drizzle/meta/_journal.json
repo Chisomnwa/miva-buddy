@@ -78,6 +78,13 @@
       "when": 1791691200000,
       "tag": "0010_embedding_model_retrieval_filter",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791802669000,
+      "tag": "0011_require_permanent_auth",
+      "breakpoints": true
     }
   ]
 }

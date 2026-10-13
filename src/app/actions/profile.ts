@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { profileInputSchema } from "@/contracts/profile";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 
 export type FormResult = { error: string | null };
 
@@ -22,20 +22,11 @@ export async function saveProfileAction(
   });
   if (!parsed.success) return { error: "Please enter your programme and level." };
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  let userId = user?.id;
-
-  if (!userId) {
-    const { data, error } = await supabase.auth.signInAnonymously();
-    if (error || !data.user) {
-      return { error: "We couldn't save your profile. Please check your connection and try again." };
-    }
-    userId = data.user.id;
-  }
+  const { supabase, user } = await getPermanentUser();
+  if (!user) return { error: "Please sign in with Google before saving your profile." };
 
   const { error } = await supabase.from("profiles").upsert({
-    user_id: userId,
+    user_id: user.id,
     programme: parsed.data.programme,
     level: parsed.data.level,
     career_interests: parsed.data.careerInterests,

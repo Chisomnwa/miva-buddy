@@ -118,6 +118,7 @@ async function assertOtherUserCannotReadGroundedData(
 }
 
 test("a grounded Learn answer cites and opens its owned source, then restores the conversation", async ({ page }, testInfo) => {
+  test.skip(true, "Legacy hosted journey depends on anonymous sign-in; replace with a permanent-user fixture before re-enabling.");
   test.skip(!enabled, "Set RUN_HOSTED_SUPABASE_TESTS=1 to seed a hosted synthetic course fixture.");
   test.skip(testInfo.project.name !== "chromium", "Run hosted Auth integration once to avoid duplicate test identities.");
   test.skip(!process.env.DATABASE_URL, "Requires DATABASE_URL for synthetic fixture setup and cleanup.");

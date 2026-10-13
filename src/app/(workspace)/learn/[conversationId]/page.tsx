@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LearnComposer } from "@/components/learn-composer";
 import { LearnConversation } from "@/components/learn-conversation";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getLearnConversation } from "@/lib/learning";
 
 type LearnConversationPageProps = {
@@ -12,8 +12,7 @@ type LearnConversationPageProps = {
 
 export default async function LearnConversationPage({ params, searchParams }: LearnConversationPageProps) {
   const [{ conversationId }, query] = await Promise.all([params, searchParams]);
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user } = await getPermanentUser();
   if (!user) notFound();
 
   const result = await getLearnConversation(user.id, conversationId);

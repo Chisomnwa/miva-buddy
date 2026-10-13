@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { GroundedLearnExperience } from "@/components/grounded-learn-experience";
 import type { GroundedStoredMessage } from "@/components/grounded-learn-conversation";
 import { mapConceptToPracticeTopic } from "@/server/practice/concept-mapping";
@@ -12,8 +12,7 @@ type PageProps = {
 
 export default async function GroundedLearnPage({ params, searchParams }: PageProps) {
   const [{ courseId, conceptId }, query] = await Promise.all([params, searchParams]);
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   if (!user) notFound();
   const { data: course, error: courseError } = await supabase.from("courses").select("id,title")
     .eq("id", courseId).eq("user_id", user.id).maybeSingle();

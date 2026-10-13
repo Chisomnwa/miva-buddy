@@ -1,12 +1,11 @@
 import { LearnComposer } from "@/components/learn-composer";
 import { RecentLearning } from "@/components/recent-learning";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getRecentLearnConversations } from "@/lib/learning";
 import Link from "next/link";
 
 export default async function LearnPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user } = await getPermanentUser();
   const recent = user ? await getRecentLearnConversations(user.id, 6) : [];
 
   return (

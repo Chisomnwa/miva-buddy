@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getProfile } from "@/lib/profile";
 import { getRecentLearnConversations } from "@/lib/learning";
 import { RecentLearning } from "@/components/recent-learning";
@@ -8,8 +8,7 @@ import { getPracticeProblem, getPracticeTopic } from "@/server/practice/catalog"
 import { displayCourseTitle } from "@/lib/course-title-display";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   const { data: profile, error: profileError } = user ? await getProfile(user.id) : { data: null, error: null };
   if (profileError) throw new Error("profile_lookup_failed");
   const recent = user ? await getRecentLearnConversations(user.id, 6) : [];

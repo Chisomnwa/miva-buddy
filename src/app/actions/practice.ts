@@ -3,13 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { practiceModeSchema } from "@/contracts/practice";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 import { getPracticeProblem, getPracticeTopic } from "@/server/practice/catalog";
 
 async function currentUser() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return { supabase, user };
+  return getPermanentUser();
 }
 
 export async function startPracticeSessionAction(formData: FormData) {
@@ -24,7 +22,7 @@ export async function startPracticeSessionAction(formData: FormData) {
   if (!problem || !topicId) redirect("/practice");
 
   const { supabase, user } = await currentUser();
-  if (!user) redirect("/onboarding");
+  if (!user) redirect("/sign-in");
   const { data: existing } = await supabase.from("practice_sessions").select("id")
     .eq("user_id", user.id).eq("problem_id", problem.id).eq("status", "in_progress").maybeSingle();
   if (existing) redirect(`/practice/session/${existing.id}`);
@@ -62,7 +60,7 @@ export async function completePracticeSessionAction(sessionId: string) {
   const id = /^[0-9a-f-]{36}$/i.test(sessionId) ? sessionId : "";
   if (!id) redirect("/practice");
   const { supabase, user } = await currentUser();
-  if (!user) redirect("/onboarding");
+  if (!user) redirect("/sign-in");
   const { data, error } = await supabase.from("practice_sessions")
     .update({ status: "completed", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", id).eq("user_id", user.id).eq("status", "in_progress").select("id").maybeSingle();

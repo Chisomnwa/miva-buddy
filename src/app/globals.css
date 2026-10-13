@@ -285,6 +285,13 @@ h2 { margin-bottom: 10px; font-size: 21px; font-weight: 650; line-height: 1.3; }
 .button-primary:hover { background: var(--navy-800); }
 .button:disabled { cursor: wait; opacity: .7; }
 .button-wide { width: 100%; }
+.google-sign-in { display: grid; gap: 12px; }
+.sign-out-form { padding: 5px 12px 0; }
+.sign-out-button { min-height: 38px; padding: 6px 10px; border: 1px solid rgb(255 255 255 / 22%); border-radius: 7px; background: transparent; color: rgb(255 255 255 / 80%); cursor: pointer; font-size: 13px; }
+.sign-out-button:hover { background: rgb(255 255 255 / 9%); color: white; }
+.mobile-account-actions { display: flex; align-items: center; gap: 12px; }
+.mobile-header .sign-out-button { border-color: var(--slate-200); color: var(--navy-800); }
+.mobile-header .sign-out-button:hover { background: var(--warm-100); color: var(--navy-950); }
 
 .onboarding-screen, .setup-screen { display: grid; min-height: 100vh; place-items: center; padding: 30px 18px; }
 .onboarding-screen { background-color: var(--warm-50); background-image: linear-gradient(rgb(250 249 247 / 72%), rgb(250 249 247 / 78%)), url("/images/onboarding-study.webp"); background-position: center; background-size: cover; }
@@ -451,8 +458,9 @@ h2 { margin-bottom: 10px; font-size: 21px; font-weight: 650; line-height: 1.3; }
   .practice-problem-card form, .practice-problem-card .button { width: 100%; }
   .sidebar { display: none; }
   .mobile-header { position: sticky; top: 0; z-index: 5; display: flex; height: 62px; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--slate-200); background: rgb(250 249 247 / 94%); backdrop-filter: blur(12px); }
-  .mobile-header .brand-lockup { font-size: 15px; }
-  .mobile-header .brand-symbol { width: 33px; height: 32px; }
+  .mobile-header { gap: 8px; padding-right: clamp(10px, 4vw, 20px); padding-left: clamp(10px, 4vw, 20px); }
+  .mobile-header .brand-lockup { width: min(48vw, 178px); flex: 0 1 178px; }
+  .mobile-account-actions { flex: 0 0 auto; gap: 8px; }
   .mobile-profile { color: var(--navy-800); font-size: 13px; font-weight: 650; text-decoration: none; }
   .workspace-main { min-height: calc(100vh - 62px); margin-left: 0; padding: 12px 22px 100px; }
   .workspace-topline { margin-bottom: 25px; }

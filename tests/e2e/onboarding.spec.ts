@@ -12,18 +12,18 @@ test("unconfigured instance explains the required setup", async ({ page }) => {
   expect(accessibility.violations).toEqual([]);
 });
 
-test("first visit opens onboarding without an authentication ceremony", async ({ page }) => {
+test("first visit requires Google sign-in before onboarding", async ({ page }) => {
   test.skip(!configured, "Requires a configured Supabase project.");
   await page.goto("/");
-  await expect(page).toHaveURL(/onboarding/);
-  await expect(page.getByRole("heading", { name: "Welcome to your study space" })).toBeVisible();
-  await expect(page.locator(".onboarding-card .brand-symbol")).toBeVisible();
-  await expect(page.getByLabel(/email|password|sign in|sign up/i)).toHaveCount(0);
+  await expect(page).toHaveURL(/sign-in/);
+  await expect(page.getByRole("heading", { name: "Sign in to Miva Buddy" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
+  await expect(page.getByLabel(/email|password/i)).toHaveCount(0);
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
 });
 
-test("onboarding photo is local and the form remains readable on desktop and mobile", async ({ page, request }) => {
+test("sign-in entry is responsive and displays the local onboarding photo", async ({ page, request }) => {
   test.skip(!configured, "Requires a configured Supabase project.");
   const image = await request.get("/images/onboarding-study.webp");
   expect(image.ok()).toBe(true);
@@ -31,10 +31,9 @@ test("onboarding photo is local and the form remains readable on desktop and mob
 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
-    await page.goto("/onboarding");
-    await expect(page.getByRole("heading", { name: "Welcome to your study space" })).toBeVisible();
-    await expect(page.getByLabel("What are you studying?")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
+    await page.goto("/sign-in");
+    await expect(page.getByRole("heading", { name: "Sign in to Miva Buddy" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
     const background = await page.locator(".onboarding-screen").evaluate((element) => getComputedStyle(element).backgroundImage);
     expect(background).toContain("/images/onboarding-study.webp");
     expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(viewport.width);
@@ -42,12 +41,12 @@ test("onboarding photo is local and the form remains readable on desktop and mob
   }
 });
 
-test("onboarding falls back to a readable surface if the photograph cannot load", async ({ page }) => {
+test("sign-in falls back to a readable surface if the photograph cannot load", async ({ page }) => {
   test.skip(!configured, "Requires a configured Supabase project.");
   await page.route("**/images/onboarding-study.webp", (route) => route.abort());
-  await page.goto("/onboarding");
-  await expect(page.getByRole("heading", { name: "Welcome to your study space" })).toBeVisible();
-  await expect(page.getByLabel("What are you studying?")).toBeVisible();
+  await page.goto("/sign-in");
+  await expect(page.getByRole("heading", { name: "Sign in to Miva Buddy" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
   const color = await page.locator(".onboarding-screen").evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(color).not.toBe("rgba(0, 0, 0, 0)");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -63,7 +62,8 @@ test("the favicon uses the supplied Miva symbol asset", async ({ request }) => {
   expect(bytes.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
 });
 
-test("profile submission creates a browser identity, persists, and remains isolated", async ({ page, browser }, testInfo) => {
+test("legacy anonymous onboarding journey (superseded by Google Auth)", async ({ page, browser }, testInfo) => {
+  test.skip(true, "This test creates anonymous users and is not valid Google-auth coverage. Add a dedicated permanent-user fixture before re-enabling browser journeys.");
   test.setTimeout(120_000);
   test.skip(!configured, "Requires a configured Supabase project.");
   test.skip(!runHostedSupabaseTests, "Set RUN_HOSTED_SUPABASE_TESTS=1 to run hosted Auth integration checks; anonymous test users count against Supabase Auth rate limits.");

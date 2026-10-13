@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { CreateCourseForm } from "@/components/course-forms";
 import { displayCourseTitle } from "@/lib/course-title-display";
-import { createClient } from "@/lib/supabase/server";
+import { getPermanentUser } from "@/lib/auth/permanent-user";
 
 export default async function CoursesPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getPermanentUser();
   const { data: courses, error } = user
     ? await supabase.from("courses").select("id,title,course_code,updated_at").eq("user_id", user.id).order("updated_at", { ascending: false })
     : { data: [], error: null };
