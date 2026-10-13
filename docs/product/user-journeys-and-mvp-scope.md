@@ -10,7 +10,7 @@ It complements the Product Specification. The Product Specification explains wha
 
 ## 2. First Time Student Journey
 
-The first time a student opens the application, onboarding should remain short and begin immediately. There is no user-facing account creation, sign-in, email verification, or password step before or during onboarding.
+The original anonymous-first journey below is historical. For the Google-auth beta, a first-time student first chooses **Continue with Google**, then completes the same short profile onboarding. Returning students with a completed profile go directly to Home.
 
 The student provides:
 
@@ -22,6 +22,9 @@ The student then reaches Home.
 
 ```text
 First visit
+    │
+    ▼
+Google sign-in
     │
     ▼
 Short onboarding
@@ -36,7 +39,7 @@ Home
     └── Start or continue learning
 ```
 
-When the student submits the profile, the application silently establishes a Supabase anonymous identity if this browser does not already have one, then persists the profile under that identity. Returning in the same browser resumes the saved profile and state. Clearing browser data or switching devices can lose access; account recovery and cross-device restoration are outside the MVP.
+The OAuth callback exchanges the PKCE code for a Supabase session and routes by profile completion. The server verifies the Auth user and rejects anonymous or unverifiable identities. Profile and learning data remain under the same Auth UUID and existing owner checks. Existing anonymous development records remain untouched and are not linked to Google accounts.
 
 The product should not require a long questionnaire before the student can begin.
 
@@ -236,7 +239,7 @@ This continuity supports the idea of a persistent learning companion.
                           ▼
                   SHARED FOUNDATION
                           │
-             Student profile + anonymous identity
+             Student profile + Supabase identity
              Persistent product state
              Responsive web experience
              Hosted AI layer
@@ -247,7 +250,7 @@ This continuity supports the idea of a persistent learning companion.
 The first coherent version includes:
 
 - Short student onboarding and profile
-- Invisible Supabase anonymous identity, same-browser persistence, and per-user data isolation
+- Supabase identity and per-user data isolation (the anonymous identity in the original baseline is superseded by Google Auth)
 - User created courses
 - PDF learning materials
 - Pasted text or notes
@@ -263,7 +266,7 @@ The first coherent version includes:
 - Simple Practice history
 - Contextual industry evidence inside Learn when uploaded material mentions a concrete job relevant skill or technology and credible job posting evidence exists
 
-The MVP does not include email/password signup or sign-in, email verification, password reset, SMTP, or cross-device account restoration. Proper user-facing account authentication may be considered after the MVP.
+The Google-auth beta does not include email/password, magic-link, OTP, invitation management, email verification, or SMTP-based recovery. Google OAuth provider credentials and redirect URLs require separate project setup; public release still requires production configuration and verification.
 
 - Traceable job evidence with role, company, relevant excerpt, and original source
 - Career interest based ranking of valid evidence

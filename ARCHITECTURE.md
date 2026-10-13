@@ -19,9 +19,9 @@ Both processes share application, persistence, provider, validation, and configu
 
 - Next.js 16 App Router, React, TypeScript, and responsive global styling are initialized.
 - `src/app` contains onboarding and protected workspace routes for Learn, Practice, Home, Courses, and Profile. Implemented behavior is mapped in the milestone sections below; production deployment and release gates remain separate.
-- Supabase anonymous Auth is the approved invisible identity mechanism. Onboarding remains public until submit; its server action creates an anonymous Supabase user only when needed and saves the profile under that user's ID. The existing SSR cookie integration and `src/proxy.ts` maintain the browser session. Hosted verification confirms same-browser persistence and profile editing.
+- The approved beta uses Supabase Google OAuth with PKCE. `/auth/callback` exchanges the code for a session, verifies the Auth user is explicitly non-anonymous, then routes to onboarding or Home based on the owner-scoped profile. SSR cookies maintain/refresh sessions; reusable server guards reject missing, anonymous, and unverifiable identities. This implementation is local code/configuration only; Google credentials and hosted Auth settings are not configured or verified here.
 - `src/contracts/profile.ts` validates the profile fields and `src/server/persistence/schema.ts` plus `drizzle/0000_profiles.sql` define the initial profile schema and row-level security policies. The migration is applied; live checks confirm own-profile access and cross-user read/write isolation.
-- Unit tests, Playwright onboarding/profile/authorization/accessibility/responsive checks, ESLint, TypeScript, and production build are present. Hosted Auth integration checks are opt-in to avoid consuming the project's anonymous-sign-in rate limit. Their verified state is tracked in `docs/plans/project-status.md`.
+- Unit tests, Playwright onboarding/profile/authorization/accessibility/responsive checks, ESLint, TypeScript, and production build are present. Existing hosted E2E identity fixtures create anonymous users and are obsolete for Google-auth coverage; no hosted auth tests have been run for this change. A dedicated permanent-user browser test fixture remains needed.
 - `docs/engineering/milestone-1-supabase-setup.md` records hosted Supabase configuration and the rate-limited integration-test workflow.
 
 ### Milestone 2 implementation complete
@@ -64,9 +64,9 @@ Both processes share application, persistence, provider, validation, and configu
 - `src/components/practice-coach.tsx` renders the transcript/composer and persisted mode control. Full-answer requests outside Tutor return a mode limit; Coach offers a deliberate Tutor switch without resubmission. Completed sessions show read-only history. No LeetCode statement, example, hint, test case, editor telemetry, or submission verdict is sent or claimed.
 - Local unit tests, live synthetic Gemini generation evaluation, hosted E2E, owner-isolation, and accessibility verification passed. Gemini embedding behavior is covered by mocked unit tests and a separate real synthetic document/query smoke test; the local end-to-end PDF workflow is recorded under M3. Deterministic lexical checks are conservative filters, not semantic proof. Evidence and safeguards are in `docs/engineering/milestone-6-practice-coaching.md` and `docs/plans/project-status.md`.
 
-### Identity decision: Supabase anonymous Auth
+### Identity decision: Google OAuth via Supabase Auth
 
-Use Supabase `signInAnonymously()` rather than a custom application-managed browser-session token. Supabase supplies a durable user UUID and signed session JWT that work with the existing Auth/Postgres/RLS integration. A custom token would require application-owned token issuance, secure persistence/rotation, and a trusted database authorization path. Neither option presents a sign-in ceremony, but anonymous Auth is the smaller and safer implementation. Anonymous sessions cannot be restored after browser data is cleared or on another device. RLS policies must scope every user-owned operation to `auth.uid()`; never use a service-role key to bypass those policies for routine student requests. Enable anonymous sign-ins in the Supabase project and dynamically render identity-dependent Next.js routes. Refer to [Supabase Anonymous Sign-Ins](https://supabase.com/docs/guides/auth/auth-anonymous) and [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
+The beta requires Google OAuth through Supabase Auth's PKCE flow. The browser starts OAuth and receives only the public Supabase URL/key; the callback exchanges the code server-side. A reusable server guard uses `auth.getUser()` and accepts only an explicit `is_anonymous === false` claim. Do not infer identity from email or user-editable metadata. Existing anonymous identities and their rows remain in place but are not linked to Google users. Migration `0011_require_permanent_auth.sql` adds restrictive policies to user-owned tables and the private course-materials bucket while preserving existing owner policies; invoker retrieval RPCs remain subject to those policies. Apply this migration only through an approved environment-specific migration process. See [Google Auth setup](docs/engineering/google-auth-setup.md), [Supabase Google OAuth](https://supabase.com/docs/guides/auth/social-login/auth-google), [Anonymous Sign-Ins](https://supabase.com/docs/guides/auth/auth-anonymous), and [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
 ```text
 Student browser
@@ -91,7 +91,7 @@ rules and use cases     product state           in PostgreSQL
 
 ## Trusted server boundary
 
-The browser presents the experience but is not authoritative for identity, ownership, provider credentials, evidence validity, Practice mode, assistance ceilings, or important state transitions. For the MVP, Supabase anonymous Auth supplies the server-verifiable identity without asking the student to sign in.
+The browser presents the experience but is not authoritative for identity, ownership, provider credentials, evidence validity, Practice mode, assistance ceilings, or important state transitions. For the beta, only a server-verified non-anonymous Supabase Auth user is accepted.
 
 The trusted server will:
 
@@ -136,7 +136,7 @@ Shared schemas for HTTP input, environment configuration, provider output, citat
 ## Planned platform boundaries
 
 - **Persistence:** PostgreSQL for explicit student, learning, Practice, evidence, and operational state.
-- **Identity:** Supabase anonymous Auth for the MVP, with SSR-managed cookie sessions and PostgreSQL RLS ownership policies. No email/password, email verification, password reset, SMTP, or cross-device recovery in the MVP.
+- **Identity:** Supabase Google OAuth (PKCE), SSR-managed cookie sessions, explicit rejection of anonymous/unverifiable identities, and PostgreSQL RLS ownership policies strengthened by migration 0011. No email/password, magic-link, or OTP flow. Google provider setup and hosted verification remain outstanding.
 - **File storage:** private Supabase Storage for uploaded PDFs; students receive only authorized access.
 - **Queue:** pg-boss on the existing PostgreSQL database, avoiding an additional queue datastore.
 - **Course retrieval:** implemented in PostgreSQL full-text search plus `pgvector` hybrid ranking, with owner-scoped RPC access and current-course/material ordering.
@@ -153,7 +153,7 @@ Gemini generation and embeddings have been exercised locally with synthetic cont
 Planned responsibilities:
 
 - render the authenticated responsive application;
-- handle anonymous identity, profile, course, Learn, and Practice requests;
+- handle verified Google identity, profile, course, Learn, and Practice requests;
 - enforce authorization and trusted state transitions;
 - perform question-time retrieval and provider orchestration;
 - enqueue long-running material-processing work;

@@ -18,9 +18,9 @@ The product promise is:
 
 ## Student identity and persistence
 
-The MVP must have no user-facing account or sign-in ceremony. On first use, a student completes one lightweight profile screen and enters the application. Do not request an email address or password, require email verification, provide password reset, or require SMTP/email infrastructure. Supabase anonymous authentication establishes a stable internal user ID without exposing an authentication step. Persist the profile and application data in Supabase/PostgreSQL and isolate each browser identity with server-verified sessions and row-level security.
+The initial anonymous-first MVP baseline below has been superseded for the beta by Google-only Supabase Auth. Students continue with Google before onboarding; the application accepts only a server-verified, non-anonymous Auth identity. No email/password, magic-link, or OTP flow is included. The profile remains a short onboarding step, and all student data remains owner-scoped by server checks and PostgreSQL RLS.
 
-The MVP guarantees continuity only in the same browser while its session data remains available. Clearing browser data or changing devices may make an anonymous profile inaccessible; cross-device restoration and account recovery are deferred beyond the MVP. Proper user-facing account authentication may be considered after the MVP.
+Existing anonymous development identities and their data are not migrated, linked, or deleted. The application no longer admits those identities to protected experiences; migration `0011_require_permanent_auth.sql` adds a database-side restriction for anonymous JWTs. Cross-device continuity is available to a student returning with the same Google account, subject to the configured Supabase project and session lifecycle.
 
 The product is inspired by the community first approach of Lilo Companion, adapted around the learning journey of Miva Computer Science and Software Engineering students. It should not become a generic collection of AI tools with Miva branding.
 

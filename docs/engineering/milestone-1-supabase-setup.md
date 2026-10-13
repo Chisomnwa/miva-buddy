@@ -15,21 +15,21 @@ Never put a database connection string, Supabase secret/service-role key, or oth
 
 ## Required dashboard configuration
 
-1. Allow new user signups globally and enable anonymous sign-ins under Authentication settings. These controls are separate.
-2. For a dedicated Miva Buddy project, disable the Email provider/password sign-in because the MVP has no email-auth flow. Email confirmation, SMTP, password reset, and auth callback URLs are not used.
+1. The original anonymous-first setup instructions are superseded. For the Google-auth beta, disable anonymous sign-ins, leave global sign-up enabled for Google OAuth, and disable the Email provider. These are separate controls.
+2. Configure the Google provider with a Google OAuth client, the Supabase Auth callback URI, and the application's `/auth/callback` redirect allowlist. See [Google Auth setup](google-auth-setup.md). Do not place the Google client secret in browser-visible configuration.
 3. Apply `drizzle/0000_profiles.sql` to the hosted development project's database before testing onboarding persistence.
-4. Keep RLS enabled. Profile policies grant access to the authenticated role only when `auth.uid() = user_id`. Supabase anonymous users use the authenticated database role and carry their own user ID.
+4. Keep RLS enabled. Existing owner policies continue to require `auth.uid() = user_id`. Supabase anonymous Auth users also assume the `authenticated` database role, so migration 0011 adds restrictive `is_anonymous = false` checks without replacing owner isolation.
 
-Anonymous sessions are browser-bound. Clearing site data or changing devices loses access to that anonymous identity and its data. No cross-device recovery is promised in the MVP.
+Existing anonymous development identities and rows are preserved, not linked or deleted. The application rejects them, and migration 0011 denies their access to user-owned tables and the private course-materials bucket. Do not apply that migration to a hosted project without the normal separate migration approval and backup process.
 
-Supabase recommends CAPTCHA protection for anonymous sign-in endpoints to reduce automated account creation. It is not needed to validate the local capstone flow, but configure an invisible CAPTCHA/Turnstile integration or equivalent abuse protection before exposing a public deployment to untrusted traffic.
+Review Supabase Auth rate limits and Google OAuth abuse protections before public release. The former anonymous-auth CAPTCHA guidance does not configure Google provider protections.
 
-The hosted end-to-end tests that create anonymous users are opt-in via `RUN_HOSTED_SUPABASE_TESTS=1` and run only in Chromium. Repeated test runs create persistent anonymous Auth records and count against Supabase's per-IP anonymous sign-in rate limit (30 requests per hour by default); allow the limit window to reset before retrying after a rate-limit response. See [Supabase Auth rate limits](https://supabase.com/docs/guides/auth/rate-limits).
+Legacy browser tests that create anonymous users do not verify the Google-auth flow and are not a valid auth test path. A dedicated permanent-user test fixture remains future work; do not enable old hosted identity tests against a project configured for this beta.
 
 ## Milestone 1 configuration verified
 
 - Project URL and publishable key configured locally.
-- Global signup and anonymous sign-ins enabled; the email/password provider remains disabled.
+- Anonymous sign-ins disabled; global signup enabled for Google OAuth; email/password provider disabled.
 - The profile migration applied and RLS verified.
 
 If the migration should be applied by `npm run db:migrate` instead of Dashboard SQL Editor, configure a direct PostgreSQL `DATABASE_URL` locally. Do not send its password in chat. If replacing the hosted project, rerun the hosted integration checks before relying on its identity, persistence, or RLS configuration.

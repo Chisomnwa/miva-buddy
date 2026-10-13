@@ -2,6 +2,8 @@
 
 > This plan records the original MVP engineering sequence and acceptance gates. Internal milestone/phase numbering is development history, not a product version. The first public deployment is the V1 release milestone; no V1 release plan is established here.
 
+> **Authentication supersession:** The anonymous-first identity in the original Milestone 1 plan is historical. The approved beta uses Google OAuth via Supabase Auth and migration 0011; see [`google-auth-setup.md`](../engineering/google-auth-setup.md) and current [project status](project-status.md). The original acceptance criteria below are not current Google-auth verification.
+
 ## Purpose and workflow
 
 This is the approved implementation plan for the Miva Buddy MVP. Milestones are coherent vertical slices with explicit verification gates. Current progress is maintained in `project-status.md`.

@@ -51,7 +51,7 @@ Do not silently resolve a genuine conflict. Record it and request review when it
 - Job evidence must be retrieved from an approved source and directly support the skill or an approved direct alias. No evidence is better than invented evidence.
 - Hands Off, Coach, and Tutor are server-enforced behavioral ceilings. Tutor may provide a full answer only when the student explicitly asks.
 - Provider credentials and privileged operations stay server-side. The browser is not a trusted enforcement boundary.
-- MVP students go directly to onboarding with no visible signup/sign-in; Supabase anonymous Auth supplies a server-verifiable ID, and PostgreSQL RLS isolates all user-owned rows. Same-browser persistence only; clearing browser data may lose the identity.
+- The approved Google-auth beta requires a server-verified, non-anonymous Supabase Auth user before onboarding or workspace access. Google OAuth uses PKCE; email/password, magic-link, and OTP are out of scope. Preserve old anonymous development data without linking or deleting it, and deny anonymous JWT access through both server guards and migration 0011 RLS policies.
 - AI, embedding, and job-evidence providers remain replaceable behind narrow interfaces.
 - Machine-consumed AI outputs are structured and validated. A failed validation may be retried once, then fails safely.
 - Persist explicit, bounded state and send providers only the minimum context necessary for the current task.
@@ -94,7 +94,7 @@ Do not silently resolve a genuine conflict. Record it and request review when it
 - `npm test`
 - `npm run test:embeddings:ollama` (live synthetic local Ollama embedding check; requires `EMBEDDING_PROVIDER=ollama` and the configured model available locally)
 - `npm run build`
-- `npm run test:e2e` (local onboarding/accessibility/responsive checks; hosted anonymous-user checks are opt-in with `RUN_HOSTED_SUPABASE_TESTS=1` to avoid consuming Supabase Auth rate limits)
+- `npm run test:e2e` (local onboarding/accessibility/responsive checks; legacy hosted anonymous-user journeys are not valid Google-auth coverage and must not be run as such. Authenticated browser coverage requires a dedicated permanent-user fixture and explicit setup.)
 - `npm run test:ai-evals` (live synthetic Gemini evaluations; requires `GEMINI_API_KEY` in ignored `.env.local` and makes hosted API requests)
 - `npm run worker:dev` (separate material worker; requires a reachable PostgreSQL `DATABASE_URL`, a configured generation provider, and the embedding service)
 - `npm run db:migrate:local` (guarded Drizzle migration command; verifies local Supabase/Docker identity and loopback database endpoint before applying migrations to the local database)

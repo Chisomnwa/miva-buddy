@@ -934,7 +934,7 @@ Profile and Settings should remain small.
 +------------------------------------------------------+
 ```
 
-Do not show email/password fields, sign-in/sign-up links, verification prompts, password recovery, or a sign-out control in the MVP. Supabase anonymous identity is established behind the scenes when the student saves onboarding; it is not an authentication screen or a user-facing ceremony.
+The Google-auth beta starts with one **Continue with Google** action. Do not add email/password, magic-link, OTP, invitation, or password-recovery controls. A signed-in student can sign out from Profile and the application returns to the sign-in screen when the session is absent, expired, anonymous, or unverifiable. Supabase identity is verified server-side; the browser UI is not an authorization boundary.
 
 Do not expose model provider, API key, temperature, prompt, retrieval,
 or infrastructure settings to students.

@@ -1,6 +1,14 @@
 # Miva Buddy Web — Current Project Status
 
-**Updated:** 2026-10-12. **Release status:** Development prototype; no public deployment has occurred. The first public deployment is the V1 release milestone. Internal phases and milestones are development stages, not product versions.
+**Updated:** 2026-10-13. **Release status:** Development prototype; no public deployment has occurred. The first public deployment is the V1 release milestone. Internal phases and milestones are development stages, not product versions.
+
+## Google-auth beta work (local implementation)
+
+- Replaced the anonymous-first entry flow in local code with Google OAuth through Supabase Auth PKCE. The callback exchanges the code server-side, verifies an explicit non-anonymous Auth identity, and routes by profile completion. Protected pages, server actions, and API routes use the shared permanent-user guard; sign-out is local-session scoped.
+- Added migration 0011 with restrictive anonymous-JWT denial for owner-scoped tables and the private course-materials bucket, retaining existing owner policies and leaving migration 0009 unchanged. It has **not** been applied to either hosted project. Existing anonymous test accounts/data are not migrated, linked, or deleted.
+- User-verified on the local Supabase stack: Google OAuth sign-in works; signing out and back in with the same Google account preserves the student's profile and Learn conversations. Migration 0011 was applied locally, and a read-only check confirmed 12 restrictive RLS policies plus retrieval RPC grants of `anon=false` and `authenticated=true`. These are local checks only, not hosted-project verification.
+- Local Supabase config disables anonymous sign-ins and email-provider signup and enables Google using environment-variable references. Production Google OAuth credentials, provider settings, callback/redirect allowlists, and migration 0011 remain unconfigured or unverified. The live two-user isolation test is still unverified; the disposable test harness is retained but intentionally postponed. Do not claim auth readiness or deploy until hosted setup and controlled isolation tests are complete.
+- Legacy hosted browser tests still create anonymous identities; they must not be treated as Google-auth coverage. The local Google test used the configured local Supabase and Google OAuth setup; no hosted credentials were added or used.
 
 ## Current snapshot
 
@@ -33,7 +41,7 @@
 ## Deployment blockers
 
 - Select and verify a Node-compatible web host and a separately supervised worker runtime.
-- Configure a dedicated production Supabase project, private Storage, anonymous-auth abuse protection, and managed secrets.
+- Configure the approved production Supabase project for Google OAuth, disable anonymous and email sign-in, apply reviewed migration 0011, configure private Storage and managed secrets, and verify backups/recovery. No hosted project has received these changes.
 - Before using Gemini embeddings with hosted student data, approve the selected account's current quota and data-use terms, apply and verify migration 0010 on the explicitly approved target database, and perform a controlled hosted synthetic verification. The local migration, Gemini smoke test, and synthetic PDF workflow do not verify either hosted project. Reprocess existing materials with Gemini; do not compare their old Ollama vectors. Independently select and verify a persistent worker runtime; production deployment remains unverified.
 - Establish backups/recovery, monitoring, provider budgets/quotas, retention/deletion, and incident-response operations.
 - Keep M7/M8 source approval and excerpt-backed evidence gates closed unless their specific permissions and acceptance criteria are satisfied.
