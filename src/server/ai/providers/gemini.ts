@@ -29,7 +29,7 @@ export class GeminiGenerationProvider implements GenerationProvider {
               schema: input.responseSchema,
             },
           },
-          max_tokens: 900,
+          max_tokens: input.maxTokens ?? 900,
         }),
         signal: input.signal,
       });

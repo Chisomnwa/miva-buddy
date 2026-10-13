@@ -9,6 +9,7 @@ export type GenerationInput = {
   messages: GenerationMessage[];
   responseSchema: Record<string, unknown>;
   signal: AbortSignal;
+  maxTokens?: number;
 };
 
 export interface GenerationProvider {

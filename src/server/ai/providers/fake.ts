@@ -17,10 +17,30 @@ export class FakeGenerationProvider implements GenerationProvider {
     const responseSchema = input.responseSchema as {
       properties?: {
         concepts?: unknown;
+        cards?: { items?: { properties?: Record<string, unknown> } };
         segments?: { items?: { properties?: Record<string, unknown> } };
       };
     };
     const userContent = [...input.messages].reverse().find((message) => message.role === "user")?.content ?? "";
+    const flashcardItems = responseSchema.properties?.cards?.items as { properties?: Record<string, unknown> } | undefined;
+    if (flashcardItems?.properties && "highlightTerms" in flashcardItems.properties && "citationIds" in flashcardItems.properties) {
+      const data = parseJson(userContent);
+      const evidence = Array.isArray(data?.lectureExcerpts) ? data.lectureExcerpts : [];
+      const first = evidence.find((item): item is { chunkId: string; content: string } =>
+        typeof item === "object" && item !== null && typeof item.chunkId === "string" && typeof item.content === "string",
+      );
+      if (!first) return JSON.stringify({ cards: [] });
+      const excerpt = first.content.trim().slice(0, 700);
+      const title = typeof data?.concept === "object" && data.concept !== null && "title" in data.concept
+        ? String(data.concept.title) : "this concept";
+      const terms = title.split(/\s+/).filter((term) => term.length > 2 && excerpt.toLocaleLowerCase("en-US").includes(term.toLocaleLowerCase("en-US")));
+      return JSON.stringify({ cards: [{
+        question: `What does the lecture explain about ${title}?`,
+        answer: excerpt,
+        highlightTerms: terms.slice(0, 4),
+        citationIds: [first.chunkId],
+      }] });
+    }
 
     if (responseSchema.properties?.concepts) {
       const data = parseJson(userContent);
