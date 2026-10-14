@@ -27,13 +27,6 @@ begin
 end
 $$;
 
--- Preserve the existing per-user bucket/path policies while denying anonymous
--- Auth sessions access to this private bucket. Other Storage buckets are untouched.
-create policy "Require permanent Auth for course material objects"
-  on storage.objects as restrictive for all to authenticated
-  using (bucket_id <> 'course-materials' or (select auth.jwt()->>'is_anonymous') = 'false')
-  with check (bucket_id <> 'course-materials' or (select auth.jwt()->>'is_anonymous') = 'false');
-
 -- Keep direct anon-role execution denied as well. Anonymous Auth sessions use
 -- the authenticated database role, so the restrictive table policies above are
 -- the enforcement point for those JWTs through these SECURITY INVOKER RPCs.

@@ -1,5 +1,6 @@
 import type { EmbeddingInput, EmbeddingProvider } from "../provider";
-import { EmbeddingProviderUnavailableError, MalformedEmbeddingOutputError } from "../provider";
+import { MalformedEmbeddingOutputError } from "../provider";
+import { createGeminiTimeoutSignal, geminiHttpFailure, geminiTransportFailure } from "@/server/ai/gemini-provider-errors";
 
 export const GEMINI_EMBEDDING_DIMENSIONS = 768;
 export const GEMINI_EMBEDDING_FORMAT_VERSION = "course-retrieval-v1";
@@ -36,6 +37,7 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
     }
 
     const modelName = `models/${this.model}`;
+    const signal = createGeminiTimeoutSignal(input.signal);
     const requests = input.texts.map((text) => ({
       model: modelName,
       content: {
@@ -56,19 +58,19 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
           method: "POST",
           headers: { "content-type": "application/json", "x-goog-api-key": this.apiKey },
           body: JSON.stringify({ requests }),
-          signal: input.signal,
+          signal,
         },
       );
     } catch (error) {
-      if (input.signal.aborted || (error instanceof Error && error.name === "AbortError")) throw error;
-      throw new EmbeddingProviderUnavailableError();
+      throw geminiTransportFailure(error, signal);
     }
 
-    if (!response.ok) throw new EmbeddingProviderUnavailableError(response.status);
+    if (!response.ok) throw geminiHttpFailure(response.status);
     let payload: GeminiEmbeddingResponse;
     try {
       payload = await response.json() as GeminiEmbeddingResponse;
-    } catch {
+    } catch (error) {
+      if (signal.aborted) throw geminiTransportFailure(error, signal);
       throw new MalformedEmbeddingOutputError();
     }
 

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, date, foreignKey, index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { bigint, check, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { courseConcepts, courseMaterials, courses } from "./course-schema";
 
 export const profiles = pgTable("profiles", {
@@ -110,6 +110,46 @@ export const remoteOkRequestBudgets = pgTable("remoteok_request_budgets", {
   unique("remoteok_request_budgets_provider_day_unique").on(table.provider, table.utcDate),
   check("remoteok_request_budgets_provider_check", sql`${table.provider} = 'remoteok'`),
   check("remoteok_request_budgets_count_check", sql`${table.requestCount} > 0`),
+]);
+
+export const geminiUsageDaily = pgTable("gemini_usage_daily", {
+  utcDate: date("utc_date", { mode: "string" }).notNull(),
+  category: text("category").notNull(),
+  scope: text("scope").notNull(),
+  scopeId: text("scope_id").notNull(),
+  usageUnits: integer("usage_units").notNull().default(0),
+}, (table) => [
+  primaryKey({ columns: [table.utcDate, table.category, table.scope, table.scopeId] }),
+  check("gemini_usage_daily_category_check", sql`${table.category} in ('interactive', 'background', 'combined')`),
+  check("gemini_usage_daily_scope_check", sql`${table.scope} in ('app', 'user')`),
+  check("gemini_usage_daily_scope_category_check", sql`(${table.scope} = 'user' and ${table.category} in ('interactive', 'background') and ${table.scopeId} <> 'all') or (${table.scope} = 'app' and ${table.category} in ('interactive', 'background', 'combined') and ${table.scopeId} = 'all')`),
+  check("gemini_usage_daily_units_check", sql`${table.usageUnits} >= 0`),
+]);
+
+export const geminiUsageReservations = pgTable("gemini_usage_reservations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull(),
+  category: text("category").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check("gemini_usage_reservations_category_check", sql`${table.category} in ('interactive', 'background')`),
+  index("gemini_usage_reservations_expiry_idx").on(table.expiresAt),
+]);
+
+export const courseMaterialAdmissions = pgTable("course_material_admissions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull(),
+  utcDate: date("utc_date", { mode: "string" }).notNull(),
+  uploadBytes: bigint("upload_bytes", { mode: "number" }).notNull(),
+  state: text("state").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check("course_material_admissions_bytes_check", sql`${table.uploadBytes} >= 0`),
+  check("course_material_admissions_state_check", sql`${table.state} in ('pending', 'admitted')`),
+  check("course_material_admissions_lease_check", sql`(${table.state} = 'pending' and ${table.expiresAt} is not null) or (${table.state} = 'admitted' and ${table.expiresAt} is null)`),
+  index("course_material_admissions_user_day_idx").on(table.userId, table.utcDate),
 ]);
 
 export {

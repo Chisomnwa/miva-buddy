@@ -57,6 +57,7 @@ export async function extractCourseConcepts(
   provider: GenerationProvider,
   chunks: ConceptEvidenceChunk[],
   signal: AbortSignal,
+  usageUserId?: string,
 ): Promise<ConceptExtraction> {
   const evidence = selectConceptEvidence(chunks);
   if (evidence.length === 0) throw new MalformedProviderOutputError();
@@ -77,7 +78,7 @@ export async function extractCourseConcepts(
           content: "Your previous output failed validation. Return only valid JSON matching the schema, with unique concepts and only the supplied supportingChunkIds. Do not change the evidence.",
         }];
     try {
-      const raw = await provider.generate({ messages: request, responseSchema: conceptExtractionJsonSchema, signal });
+      const raw = await provider.generate({ messages: request, responseSchema: conceptExtractionJsonSchema, signal, usageUserId, usageCategory: "background" });
       const parsed = conceptExtractionSchema.parse(JSON.parse(raw));
       const seenTitles = new Set<string>();
       for (const concept of parsed.concepts) {

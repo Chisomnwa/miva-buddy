@@ -9,6 +9,8 @@ import { MalformedProviderOutputError, type GenerationMessage } from "@/server/a
 import { generateLearningReply } from "@/server/ai/structured-learning";
 import { recordSafeOperation } from "@/server/observability/safe-telemetry";
 import { buildInterviewPreparation, interviewMessageContent, recoverPreviousInterviewPreparationSegment } from "@/server/interview-preparation/prepare";
+import { GeminiUsageProtectionError } from "@/server/ai/gemini-usage-errors";
+import { classifySafeProviderFailure } from "@/server/ai/gemini-provider-errors";
 
 const maxRequestBytes = 16_384;
 const maxMessagesPerMinute = 8;
@@ -158,12 +160,18 @@ export async function POST(request: Request) {
         return json({ error: "provider_unavailable", conversationId }, 503);
       }
       const signal = AbortSignal.any([request.signal, AbortSignal.timeout(generationTimeoutMs)]);
-      reply = await generateLearningReply(provider, messages, signal);
+      reply = await generateLearningReply(provider, messages, signal, user.id);
       recordSafeOperation({ operation: "learn", provider: providerName, outcome: "success", durationMs: Date.now() - providerStartedAt });
     } catch (error) {
       const outcome = request.signal.aborted ? "cancelled" : error instanceof MalformedProviderOutputError ? "invalid_output" : "failure";
       recordSafeOperation({ operation: "learn", provider: providerName, outcome, durationMs: Date.now() - providerStartedAt });
       if (request.signal.aborted) return json({ error: "request_cancelled", conversationId }, 499);
+      if (error instanceof GeminiUsageProtectionError && error.reason !== "unavailable") {
+        return json({ error: "gemini_usage_limit", conversationId }, 429);
+      }
+      if (error instanceof GeminiUsageProtectionError) return json({ error: "learning_unavailable", conversationId }, 503);
+      const providerFailure = classifySafeProviderFailure(error);
+      if (providerFailure) return json({ error: providerFailure.code, conversationId }, providerFailure.status);
       return json({
         error: error instanceof MalformedProviderOutputError ? "invalid_provider_response" : "provider_unavailable",
         conversationId,

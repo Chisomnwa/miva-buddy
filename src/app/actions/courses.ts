@@ -9,6 +9,15 @@ import { getDatabasePool } from "@/server/persistence/pool";
 import { enqueueMaterialProcessing } from "@/server/queue/material-jobs";
 import { PdfMaterialError, validatePdfPageCount } from "@/server/ingestion/pdf-extraction";
 import { removeFailedMaterial } from "@/server/courses/remove-failed-material";
+import {
+  finalizeCourseMaterialAdmission,
+  materialAdmissionMessage,
+  queueManualMaterialRetry,
+  releaseCourseMaterialAdmission,
+  reserveCourseMaterialAdmission,
+  undoUnqueuedManualRetry,
+} from "@/server/courses/material-admission";
+import { getServerConfig } from "@/lib/config";
 
 export type CourseFormResult = { error: string | null };
 
@@ -54,12 +63,26 @@ export async function addNotesAction(_previous: CourseFormResult, data: FormData
   if (!parsed.success) return { error: "Add a title and notes (up to 100,000 characters)." };
   const { supabase, user } = await currentUser();
   if (!user) return { error: "Your session expired. Refresh the page and try again." };
+  const { data: course } = await supabase.from("courses").select("id")
+    .eq("id", parsed.data.courseId).eq("user_id", user.id).maybeSingle();
+  if (!course) return { error: "We couldn't find this course. Refresh and try again." };
+  const pool = getDatabasePool();
+  const admission = await reserveCourseMaterialAdmission({
+    userId: user.id,
+    uploadBytes: Buffer.byteLength(parsed.data.content, "utf8"),
+    pool,
+  });
+  if (admission.status !== "reserved") return { error: materialAdmissionMessage(admission.status) };
+  if (!admission.reservationId) return { error: materialAdmissionMessage("unavailable") };
   const materialId = randomUUID();
   const { error: materialError } = await supabase.from("course_materials").insert({
     id: materialId, user_id: user.id, course_id: parsed.data.courseId, title: parsed.data.title,
     kind: "notes", status: "queued", storage_path: null,
   });
-  if (materialError) return { error: "We couldn't save these notes. Check the course and try again." };
+  if (materialError) {
+    await releaseCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool });
+    return { error: "We couldn't save these notes. Check the course and try again." };
+  }
   const { error: pageError } = await supabase.from("material_pages").insert({
     user_id: user.id, course_id: parsed.data.courseId, material_id: materialId,
     page_number: 1, section_label: "Pasted notes", content: parsed.data.content,
@@ -68,12 +91,20 @@ export async function addNotesAction(_previous: CourseFormResult, data: FormData
     const { error: rollbackError } = await supabase.from("course_materials").delete()
       .eq("id", materialId).eq("user_id", user.id).eq("course_id", parsed.data.courseId);
     if (rollbackError) {
-      await getDatabasePool().query(
+      await pool.query(
         "update public.course_materials set status = 'failed', failure_code = 'notes_save_failed' where id = $1 and user_id = $2 and course_id = $3",
         [materialId, user.id, parsed.data.courseId],
       );
+    } else {
+      await releaseCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool });
     }
     return { error: "We couldn't save these notes. Please try again." };
+  }
+  if (!await finalizeCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool })) {
+    const { error: rollbackError } = await supabase.from("course_materials").delete()
+      .eq("id", materialId).eq("user_id", user.id).eq("course_id", parsed.data.courseId);
+    if (!rollbackError) await releaseCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool });
+    return { error: "Course materials are temporarily unavailable. Please try again." };
   }
   try {
     await enqueueMaterialProcessing({ kind: "notes", userId: user.id, courseId: parsed.data.courseId, materialId });
@@ -137,6 +168,13 @@ export async function uploadPdfAction(_previous: CourseFormResult, data: FormDat
     }
     return { error: "Our PDF reader could not validate this file. Try another PDF or paste your notes instead." };
   }
+  const { data: course } = await supabase.from("courses").select("id")
+    .eq("id", courseId).eq("user_id", user.id).maybeSingle();
+  if (!course) return { error: "We couldn't find this course. Refresh and try again." };
+  const pool = getDatabasePool();
+  const admission = await reserveCourseMaterialAdmission({ userId: user.id, uploadBytes: file.size, pool });
+  if (admission.status !== "reserved") return { error: materialAdmissionMessage(admission.status) };
+  if (!admission.reservationId) return { error: materialAdmissionMessage("unavailable") };
   const materialId = randomUUID();
   const safeName = `${materialId}.pdf`;
   const storagePath = `${user.id}/${courseId}/${materialId}/${safeName}`;
@@ -147,10 +185,12 @@ export async function uploadPdfAction(_previous: CourseFormResult, data: FormDat
     }));
   } catch {
     logPdfUploadDiagnostic("storage_upload", "operation_threw");
+    await releaseCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool });
     return { error: "We couldn't upload this PDF. Please try again." };
   }
   if (uploadError) {
     logPdfUploadDiagnostic("storage_upload", "operation_rejected");
+    await releaseCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool });
     return { error: "We couldn't upload this PDF. Please try again." };
   }
   let materialError: unknown;
@@ -164,13 +204,32 @@ export async function uploadPdfAction(_previous: CourseFormResult, data: FormDat
   }
   if (materialError) {
     logPdfUploadDiagnostic("material_insert", materialError === true ? "operation_threw" : "operation_rejected");
+    let storageRemoved = false;
     try {
       const { error: cleanupError } = await supabase.storage.from("course-materials").remove([storagePath]);
       if (cleanupError) logPdfUploadDiagnostic("storage_cleanup", "cleanup_rejected");
+      else storageRemoved = true;
     } catch {
       logPdfUploadDiagnostic("storage_cleanup", "cleanup_threw");
     }
+    if (storageRemoved) await releaseCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool });
     return { error: "We couldn't add this PDF to the course. Please try again." };
+  }
+  if (!await finalizeCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool })) {
+    const { error: rollbackError } = await supabase.from("course_materials").delete()
+      .eq("id", materialId).eq("user_id", user.id).eq("course_id", courseId);
+    let storageRemoved = false;
+    try {
+      const { error: cleanupError } = await supabase.storage.from("course-materials").remove([storagePath]);
+      if (cleanupError) logPdfUploadDiagnostic("storage_cleanup", "cleanup_rejected");
+      else storageRemoved = true;
+    } catch {
+      logPdfUploadDiagnostic("storage_cleanup", "cleanup_threw");
+    }
+    if (!rollbackError && storageRemoved) {
+      await releaseCourseMaterialAdmission({ reservationId: admission.reservationId, userId: user.id, pool });
+    }
+    return { error: "Course materials are temporarily unavailable. Please try again." };
   }
   let signed: { signedUrl?: string } | null | undefined;
   let signedError: unknown;
@@ -244,8 +303,10 @@ export async function retryMaterialAction(_previous: CourseFormResult, data: For
   const { supabase, user } = await currentUser();
   if (!user) return { error: "Your session expired. Refresh the page and try again." };
   const { data: material } = await supabase.from("course_materials")
-    .select("id,kind,storage_path,status").eq("id", materialId).eq("course_id", courseId).eq("user_id", user.id).maybeSingle();
+    .select("id,kind,storage_path,status,manual_retry_count").eq("id", materialId).eq("course_id", courseId).eq("user_id", user.id).maybeSingle();
   if (!material || material.status !== "failed") return { error: "This material is no longer available to retry." };
+  const retryLimit = getServerConfig().COURSE_MATERIAL_MANUAL_RETRY_LIMIT;
+  if (material.manual_retry_count >= retryLimit) return { error: "This material has reached its processing retry limit. Add it again if you still need it." };
 
   let signedUrl: string | undefined;
   if (material.kind === "pdf") {
@@ -255,22 +316,14 @@ export async function retryMaterialAction(_previous: CourseFormResult, data: For
     signedUrl = signed.signedUrl;
   }
   const pool = getDatabasePool();
-  const update = await pool.query(
-    `update public.course_materials set status = 'queued', failure_code = null, updated_at = now()
-     where id = $1 and course_id = $2 and user_id = $3 and status = 'failed'`,
-    [materialId, courseId, user.id],
-  );
-  if (update.rowCount !== 1) return { error: "This material could not be retried. Refresh and try again." };
+  const retryQueued = await queueManualMaterialRetry({ materialId, courseId, userId: user.id, retryLimit, pool });
+  if (!retryQueued) return { error: "This material could not be retried. Refresh and try again." };
   try {
     await enqueueMaterialProcessing(material.kind === "notes"
       ? { kind: "notes", userId: user.id, courseId, materialId }
       : { kind: "pdf", userId: user.id, courseId, materialId, signedUrl: signedUrl! });
   } catch {
-    await pool.query(
-      `update public.course_materials set status = 'failed', failure_code = 'queue_unavailable', updated_at = now()
-       where id = $1 and course_id = $2 and user_id = $3 and status = 'queued'`,
-      [materialId, courseId, user.id],
-    );
+    await undoUnqueuedManualRetry({ materialId, courseId, userId: user.id, pool });
     return { error: "Processing could not be queued. Please try again shortly." };
   }
   revalidatePath(`/courses/${courseId}`);

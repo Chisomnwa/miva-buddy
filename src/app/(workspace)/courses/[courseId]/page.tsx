@@ -124,6 +124,7 @@ export default async function CourseDetailPage({ params, searchParams }: CourseP
           <div><strong>Learning from your course material.</strong> Source references are tied to passages from {selectedMaterial.title}.</div>
         </div>
         {query.notice === "retry" && <p className="form-error" role="status">We couldn&apos;t retrieve your course material or prepare a reply just now. Your question is saved; you can try again below.</p>}
+        {query.notice === "usage_limit" && <p className="form-error" role="status">The shared AI usage limit has been reached for now. Please try again later.</p>}
         <GroundedConceptLearningModes key={selectedConcept.id} conceptTitle={selectedConcept.title} messages={messages} courseId={course.id}
           userId={user.id} materialId={selectedMaterial.id} conceptId={selectedConcept.id} sourceVersion={sourceVersion} conversationId={conversationId}
           suggestions={lastAssistant?.follow_up_questions ?? []} />

@@ -38,6 +38,7 @@ export const courseFlashcardsErrorSchema = z.enum([
   "sources_unavailable",
   "source_changed",
   "rate_limited",
+  "usage_limit",
   "generation_timeout",
   "provider_quota",
   "provider_configuration",

@@ -1,5 +1,6 @@
 import type { GenerationInput, GenerationProvider } from "../provider";
-import { MalformedProviderOutputError, ProviderUnavailableError } from "../provider";
+import { MalformedProviderOutputError } from "../provider";
+import { createGeminiTimeoutSignal, geminiHttpFailure, geminiTransportFailure } from "../gemini-provider-errors";
 
 const endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
@@ -10,6 +11,7 @@ export class GeminiGenerationProvider implements GenerationProvider {
   ) {}
 
   async generate(input: GenerationInput): Promise<string> {
+    const signal = createGeminiTimeoutSignal(input.signal);
     let response: Response;
     try {
       response = await fetch(endpoint, {
@@ -31,18 +33,18 @@ export class GeminiGenerationProvider implements GenerationProvider {
           },
           max_tokens: input.maxTokens ?? 900,
         }),
-        signal: input.signal,
+        signal,
       });
     } catch (error) {
-      if (input.signal.aborted || (error instanceof Error && error.name === "AbortError")) throw error;
-      throw new ProviderUnavailableError();
+      throw geminiTransportFailure(error, signal);
     }
 
-    if (!response.ok) throw new ProviderUnavailableError(response.status);
+    if (!response.ok) throw geminiHttpFailure(response.status);
     let payload: unknown;
     try {
       payload = await response.json();
-    } catch {
+    } catch (error) {
+      if (signal.aborted) throw geminiTransportFailure(error, signal);
       throw new MalformedProviderOutputError();
     }
     if (!payload || typeof payload !== "object" || !("choices" in payload) || !Array.isArray(payload.choices)) {

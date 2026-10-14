@@ -2,6 +2,10 @@ export type EmbeddingInput = {
   texts: string[];
   signal: AbortSignal;
   task?: "document" | "query";
+  /** Authenticated owner for server-side Gemini usage accounting; never sent to the model. */
+  usageUserId?: string;
+  /** Explicit budget bucket for Gemini; absent values fail closed in its wrapper. */
+  usageCategory?: "interactive" | "background";
 };
 
 export interface EmbeddingProvider {

@@ -9,6 +9,8 @@ import { generatePracticeCoachingReply } from "@/server/practice/coaching";
 import { getPracticeProblem } from "@/server/practice/catalog";
 import { getServerConfig } from "@/lib/config";
 import { recordSafeOperation } from "@/server/observability/safe-telemetry";
+import { GeminiUsageProtectionError } from "@/server/ai/gemini-usage-errors";
+import { classifySafeProviderFailure, safeProviderFailureMessage } from "@/server/ai/gemini-provider-errors";
 
 const maxRequestBytes = 16_384;
 const maxMessagesPerMinute = 8;
@@ -113,6 +115,7 @@ export async function POST(request: Request) {
         })),
         problem,
         signal: AbortSignal.any([request.signal, AbortSignal.timeout(generationTimeoutMs)]),
+        usageUserId: user.id,
         onRejected: (attempt, reason) => console.warn("Practice coaching candidate rejected by policy", { attempt, reason, mode: session.mode }),
       });
       response = generated.response;
@@ -122,6 +125,16 @@ export async function POST(request: Request) {
       const outcome = request.signal.aborted ? "cancelled" : error instanceof MalformedProviderOutputError ? "invalid_output" : "failure";
       recordSafeOperation({ operation: "practice_coaching", provider: providerName, outcome, durationMs: Date.now() - providerStartedAt });
       if (request.signal.aborted) return json({ error: "request_cancelled" }, 499);
+      if (error instanceof GeminiUsageProtectionError && error.reason !== "unavailable") {
+        return json({ error: "gemini_usage_limit", message: "The shared AI usage limit has been reached for now. Please try again later." }, 429);
+      }
+      if (error instanceof GeminiUsageProtectionError) {
+        return json({ error: "coaching_unavailable", message: "AI is temporarily unavailable. Please try again shortly." }, 503);
+      }
+      const providerFailure = classifySafeProviderFailure(error);
+      if (providerFailure) {
+        return json({ error: providerFailure.code, message: safeProviderFailureMessage(providerFailure.code) }, providerFailure.status);
+      }
       const code = error instanceof MalformedProviderOutputError ? "invalid_candidate" : "provider_or_policy_failure";
       console.warn("Practice coaching request failed safely", { code, mode: session.mode });
       return json({ error: "coaching_failed", message: "We couldn’t safely prepare a response. Your message is saved; please try again with a short attempt or rephrase your question." }, 502);

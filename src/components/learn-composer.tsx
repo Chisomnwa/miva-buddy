@@ -11,11 +11,18 @@ type LearnComposerProps = {
   beforeSuggestions?: ReactNode;
 };
 
-function publicError(error: unknown) {
+export function learnPublicErrorMessage(error: unknown) {
   if (error === "rate_limited") return "Please wait a moment before sending another message.";
+  if (error === "gemini_usage_limit") return "The shared AI usage limit has been reached for now. Please try again later.";
   if (error === "request_too_large") return "That message is too long. Please shorten it and try again.";
+  if (error === "provider_quota") return "The AI service is at its current usage limit. Please try again later.";
+  if (error === "generation_timeout") return "That took longer than expected. Please try again shortly.";
+  if (error === "provider_configuration") return "AI is temporarily unavailable. Please try again later.";
+  if (error === "provider_rejected") return "We couldn’t process that request safely. Please rephrase and try again.";
   if (error === "provider_unavailable" || error === "invalid_provider_response") {
-    return "We couldn’t get a response just now. Your question is saved; please try again in a moment.";
+    return error === "provider_unavailable"
+      ? "The AI service is temporarily unavailable. Please try again shortly."
+      : "We couldn’t verify a safe response. Your question is saved; please try again in a moment.";
   }
   return "We couldn’t send that message. Please try again.";
 }
@@ -48,12 +55,15 @@ export function LearnComposer({ conversationId, suggestions = [], beforeSuggesti
       const result: { conversationId?: string; error?: string } = await response.json();
       if (result.conversationId) {
         setMessage("");
-        const suffix = result.error === "provider_unavailable" || result.error === "invalid_provider_response" ? "?notice=retry" : "";
+        const notice = result.error === "gemini_usage_limit" ? "usage_limit"
+          : ["provider_unavailable", "provider_quota", "generation_timeout", "provider_configuration", "provider_rejected", "invalid_provider_response"]
+            .includes(result.error ?? "") ? result.error : null;
+        const suffix = notice ? `?notice=${encodeURIComponent(notice)}` : "";
         router.push(`/learn/${result.conversationId}${suffix}`);
         router.refresh();
         return;
       }
-      setError(publicError(result.error));
+      setError(learnPublicErrorMessage(result.error));
     } catch {
       if (!activeController.signal.aborted) setError("We couldn’t send that message. Please check your connection and try again.");
     } finally {

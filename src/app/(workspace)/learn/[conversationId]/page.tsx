@@ -27,6 +27,14 @@ export default async function LearnConversationPage({ params, searchParams }: Le
       {query.notice === "retry" && (
         <p className="form-error" role="alert">We couldn’t get a response just now. Your question is saved; you can try again below.</p>
       )}
+      {query.notice === "usage_limit" && (
+        <p className="form-error" role="status">The shared AI usage limit has been reached for now. Please try again later.</p>
+      )}
+      {query.notice === "provider_quota" && <p className="form-error" role="status">The AI service is at its current usage limit. Please try again later.</p>}
+      {query.notice === "generation_timeout" && <p className="form-error" role="status">That took longer than expected. Please try again shortly.</p>}
+      {query.notice === "provider_configuration" && <p className="form-error" role="status">AI is temporarily unavailable. Please try again later.</p>}
+      {query.notice === "provider_rejected" && <p className="form-error" role="status">We couldn’t process that request safely. Please rephrase and try again.</p>}
+      {query.notice === "provider_unavailable" && <p className="form-error" role="status">The AI service is temporarily unavailable. Please try again shortly.</p>}
       <LearnConversation messages={result.messages} />
       <div className="learning-disclosure" role="note">
         Avoid sharing sensitive personal information.

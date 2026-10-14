@@ -7,16 +7,23 @@ const mocks = vi.hoisted(() => ({
   upload: vi.fn(),
   storageRemove: vi.fn(),
   table: vi.fn(),
+  materialInsert: vi.fn(),
+  databaseQuery: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/server/persistence/pool", () => ({ getDatabasePool: mocks.getDatabasePool }));
 vi.mock("@/server/queue/material-jobs", () => ({ enqueueMaterialProcessing: mocks.enqueueMaterialProcessing }));
+vi.mock("@/lib/config", () => ({ getServerConfig: () => ({
+  COURSE_MATERIAL_DAILY_COUNT_LIMIT: 5,
+  COURSE_MATERIAL_DAILY_BYTES_LIMIT: 50 * 1024 * 1024,
+  COURSE_MATERIAL_MANUAL_RETRY_LIMIT: 2,
+}) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("server-only", () => ({}));
 
-import { uploadPdfAction } from "@/app/actions/courses";
+import { addNotesAction, uploadPdfAction } from "@/app/actions/courses";
 import { validatePdfPageCount } from "@/server/ingestion/pdf-extraction";
 import nextConfig from "../../next.config";
 
@@ -60,7 +67,26 @@ describe("PDF upload server-side preflight", () => {
     vi.clearAllMocks();
     mocks.upload.mockResolvedValue({ error: null });
     mocks.storageRemove.mockResolvedValue({ error: null });
-    mocks.table.mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) });
+    mocks.materialInsert.mockResolvedValue({ error: null });
+    mocks.databaseQuery.mockReset().mockImplementation(async (query: string) => {
+      if (query.includes("reserve_course_material_admission")) {
+        return { rows: [{ decision: "reserved", reservation_id: "admission-id" }] };
+      }
+      if (query.includes("finalize_course_material_admission")) return { rows: [{ finalized: true }] };
+      return { rows: [], rowCount: 1 };
+    });
+    mocks.getDatabasePool.mockReturnValue({ query: mocks.databaseQuery });
+    mocks.table.mockImplementation((tableName: string) => {
+      if (tableName === "courses") {
+        const maybeSingle = vi.fn().mockResolvedValue({ data: { id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" }, error: null });
+        const eq = vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) }));
+        return { select: vi.fn(() => ({ eq })) };
+      }
+      return {
+        insert: mocks.materialInsert,
+        delete: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })) })) })),
+      };
+    });
     mocks.createClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner-id", is_anonymous: false } } }) },
       storage: { from: vi.fn(() => ({
@@ -113,12 +139,13 @@ describe("PDF upload server-side preflight", () => {
       category: "operation_rejected",
     });
     expect(warning.mock.calls.flat().join(" ")).not.toContain("sensitive storage detail");
-    expect(mocks.table).not.toHaveBeenCalled();
+    expect(mocks.materialInsert).not.toHaveBeenCalled();
+    expect(mocks.databaseQuery).toHaveBeenLastCalledWith(expect.stringContaining("release_course_material_admission"), ["admission-id", "owner-id"]);
   });
 
   it("reports material insertion and cleanup failures using fixed categories", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    mocks.table.mockReturnValueOnce({ insert: vi.fn().mockResolvedValue({ error: { message: "private database detail" } }) });
+    mocks.materialInsert.mockResolvedValueOnce({ error: { message: "private database detail" } });
     mocks.storageRemove.mockResolvedValueOnce({ error: { message: "private cleanup detail" } });
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     const data = new FormData();
@@ -139,8 +166,6 @@ describe("PDF upload server-side preflight", () => {
   it("reports a queue failure while retaining the existing failed-material behavior", async () => {
     vi.stubEnv("NODE_ENV", "development");
     mocks.enqueueMaterialProcessing.mockRejectedValueOnce(new Error("private queue detail"));
-    const statusUpdate = vi.fn().mockResolvedValue({});
-    mocks.getDatabasePool.mockReturnValue({ query: statusUpdate });
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     const data = new FormData();
     data.set("courseId", "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
@@ -153,7 +178,7 @@ describe("PDF upload server-side preflight", () => {
       stage: "queue_create",
       category: "operation_threw",
     });
-    expect(statusUpdate).toHaveBeenCalledOnce();
+    expect(mocks.databaseQuery).toHaveBeenCalledTimes(3);
     expect(warning.mock.calls.flat().join(" ")).not.toContain("private queue detail");
   });
 
@@ -171,6 +196,37 @@ describe("PDF upload server-side preflight", () => {
     expect(mocks.upload).not.toHaveBeenCalled();
     expect(mocks.table).not.toHaveBeenCalled();
     expect(mocks.enqueueMaterialProcessing).not.toHaveBeenCalled();
+  });
+
+  it("rejects a daily admission denial before private Storage or material writes", async () => {
+    mocks.databaseQuery.mockReset().mockResolvedValueOnce({ rows: [{ decision: "daily_count_limit", reservation_id: null }] });
+    const data = new FormData();
+    data.set("courseId", "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
+    data.set("title", "Synthetic PDF");
+    data.set("file", syntheticPdfFile("synthetic.pdf"));
+
+    await expect(uploadPdfAction({ error: null }, data)).resolves.toEqual({
+      error: "You've reached today's course-material limit. Please try again tomorrow.",
+    });
+    expect(mocks.upload).not.toHaveBeenCalled();
+    expect(mocks.materialInsert).not.toHaveBeenCalled();
+    expect(mocks.enqueueMaterialProcessing).not.toHaveBeenCalled();
+  });
+
+  it("applies the same daily admission to pasted notes using UTF-8 bytes", async () => {
+    const data = new FormData();
+    data.set("courseId", "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
+    data.set("title", "Lecture notes");
+    data.set("content", "café");
+
+    await addNotesAction({ error: null }, data);
+
+    expect(mocks.databaseQuery).toHaveBeenCalledWith(expect.stringContaining("reserve_course_material_admission"), [
+      "owner-id", Buffer.byteLength("café", "utf8"), 5, 50 * 1024 * 1024,
+    ]);
+    expect(mocks.databaseQuery).toHaveBeenCalledWith(expect.stringContaining("finalize_course_material_admission"), [expect.any(String), "owner-id"]);
+    expect(mocks.materialInsert).toHaveBeenCalledTimes(2);
+    expect(mocks.enqueueMaterialProcessing).toHaveBeenCalledOnce();
   });
 
   it("rejects unsupported file extensions before authentication or persistence", async () => {

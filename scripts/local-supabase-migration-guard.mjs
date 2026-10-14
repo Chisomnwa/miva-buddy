@@ -13,6 +13,8 @@ export const expectedMigrationTags = Object.freeze([
   "0009_remoteok_request_budget",
   "0010_embedding_model_retrieval_filter",
   "0011_require_permanent_auth",
+  "0012_gemini_usage_reservations",
+  "0013_course_material_admission_limits",
 ]);
 
 const loopbackNames = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -299,7 +301,7 @@ export function validateDrizzleMigrationChain(journal, sqlFilenames) {
     || expectedFiles.some((filename) => !sqlFilenames.includes(filename))
     || sqlFilenames.some((filename) => /^\d{4}_.*\.sql$/.test(filename) && !expectedFiles.includes(filename))
   ) {
-    throw new Error("Drizzle migrations 0000–0011 or their journal order do not match the approved chain.");
+    throw new Error("Drizzle migrations 0000–0013 or their journal order do not match the approved chain.");
   }
 
   return expectedMigrationTags;

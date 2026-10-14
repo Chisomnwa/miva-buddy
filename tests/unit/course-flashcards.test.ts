@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyCourseFlashcardGenerationError, generateCourseFlashcards, type FlashcardEvidence } from "@/server/ai/course-flashcards";
 import type { GenerationProvider } from "@/server/ai/provider";
 import { MalformedProviderOutputError, ProviderUnavailableError } from "@/server/ai/provider";
+import { GeminiProviderError } from "@/server/ai/gemini-provider-errors";
 
 const chunkId = "00000000-0000-4000-8000-000000000001";
 const evidence: FlashcardEvidence[] = [{
@@ -103,6 +104,11 @@ describe("concept-specific grounded flashcard generation", () => {
     expect(classifyCourseFlashcardGenerationError(new ProviderUnavailableError(403))).toBe("provider_configuration");
     expect(classifyCourseFlashcardGenerationError(new ProviderUnavailableError(400))).toBe("provider_rejected");
     expect(classifyCourseFlashcardGenerationError(new ProviderUnavailableError(503))).toBe("provider_unavailable");
+    expect(classifyCourseFlashcardGenerationError(new GeminiProviderError("timeout"))).toBe("generation_timeout");
+    expect(classifyCourseFlashcardGenerationError(new GeminiProviderError("rate_limit"))).toBe("provider_quota");
+    expect(classifyCourseFlashcardGenerationError(new GeminiProviderError("configuration"))).toBe("provider_configuration");
+    expect(classifyCourseFlashcardGenerationError(new GeminiProviderError("request"))).toBe("provider_rejected");
+    expect(classifyCourseFlashcardGenerationError(new GeminiProviderError("temporary_failure"))).toBe("provider_unavailable");
     expect(classifyCourseFlashcardGenerationError(new MalformedProviderOutputError())).toBe("invalid_generation");
     expect(classifyCourseFlashcardGenerationError(new Error("sensitive provider detail"))).toBe("generation_unavailable");
   });

@@ -31,6 +31,7 @@ export const courseMaterials = pgTable("course_materials", {
   status: text("status").notNull().default("queued"),
   failureCode: text("failure_code"),
   processingAttempts: integer("processing_attempts").notNull().default(0),
+  manualRetryCount: integer("manual_retry_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -47,6 +48,7 @@ export const courseMaterials = pgTable("course_materials", {
   check("course_materials_status_check", sql`${table.status} in ('queued', 'processing', 'ready', 'failed')`),
   check("course_materials_storage_check", sql`(${table.kind} = 'pdf' and ${table.storagePath} is not null) or (${table.kind} = 'notes' and ${table.storagePath} is null)`),
   check("course_materials_attempts_check", sql`${table.processingAttempts} >= 0`),
+  check("course_materials_manual_retry_count_check", sql`${table.manualRetryCount} >= 0`),
 ]);
 
 export const materialPages = pgTable("material_pages", {

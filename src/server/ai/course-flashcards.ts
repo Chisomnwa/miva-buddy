@@ -3,6 +3,8 @@ import { courseFlashcardsSchema, type CourseFlashcard } from "@/contracts/course
 import { cleanFlashcardDisplayText } from "@/lib/course-flashcard-display";
 import type { GenerationProvider } from "@/server/ai/provider";
 import { MalformedProviderOutputError, ProviderUnavailableError } from "@/server/ai/provider";
+import { GeminiUsageProtectionError } from "@/server/ai/gemini-usage-errors";
+import { classifySafeProviderFailure } from "@/server/ai/gemini-provider-errors";
 
 export type FlashcardEvidence = {
   chunkId: string;
@@ -98,10 +100,17 @@ function parseAndValidate(raw: string, evidence: FlashcardEvidence[]): CourseFla
 }
 
 export function classifyCourseFlashcardGenerationError(error: unknown) {
+  if (error instanceof GeminiUsageProtectionError && error.reason !== "unavailable") return "usage_limit" as const;
   if (error instanceof Error && error.name === "TimeoutError") return "generation_timeout" as const;
   if (error instanceof MalformedProviderOutputError || error instanceof SyntaxError || error instanceof ZodError) {
     return "invalid_generation" as const;
   }
+  const providerFailure = classifySafeProviderFailure(error);
+  if (providerFailure?.code === "provider_quota") return "provider_quota" as const;
+  if (providerFailure?.code === "generation_timeout") return "generation_timeout" as const;
+  if (providerFailure?.code === "provider_configuration") return "provider_configuration" as const;
+  if (providerFailure?.code === "provider_rejected") return "provider_rejected" as const;
+  if (providerFailure) return "provider_unavailable" as const;
   if (error instanceof ProviderUnavailableError) {
     if (error.statusCode === 429) return "provider_quota" as const;
     if (error.statusCode === 401 || error.statusCode === 403) return "provider_configuration" as const;
@@ -113,7 +122,7 @@ export function classifyCourseFlashcardGenerationError(error: unknown) {
 
 export async function generateCourseFlashcards(
   provider: GenerationProvider,
-  input: { conceptTitle: string; conceptDescription: string; evidence: FlashcardEvidence[]; signal: AbortSignal },
+  input: { conceptTitle: string; conceptDescription: string; evidence: FlashcardEvidence[]; signal: AbortSignal; usageUserId?: string },
 ): Promise<CourseFlashcard[]> {
   if (!input.evidence.length || input.evidence.every((source) => source.content.trim().length < 40)) return [];
   const messages = [
@@ -129,7 +138,7 @@ export async function generateCourseFlashcards(
       content: "The previous result failed validation. Return valid JSON with unique, supported cards citing only supplied chunk IDs; return fewer cards or none if necessary.",
     }];
     try {
-      const raw = await provider.generate({ messages: request, responseSchema: courseFlashcardsJsonSchema, signal: input.signal, maxTokens: 2_400 });
+      const raw = await provider.generate({ messages: request, responseSchema: courseFlashcardsJsonSchema, signal: input.signal, maxTokens: 2_400, usageUserId: input.usageUserId, usageCategory: "interactive" });
       return parseAndValidate(raw, input.evidence);
     } catch (error) {
       if (!(error instanceof MalformedProviderOutputError || error instanceof SyntaxError || error instanceof ZodError)) throw error;

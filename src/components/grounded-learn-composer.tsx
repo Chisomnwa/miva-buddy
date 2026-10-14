@@ -15,10 +15,15 @@ type GroundedComposerProps = {
   onHimalayasReferences?: (value: unknown) => void;
 };
 
-function publicError(error: string | undefined) {
+export function groundedPublicErrorMessage(error: string | undefined) {
   if (error === "rate_limited") return "Please wait a moment before sending another message.";
+  if (error === "gemini_usage_limit") return "The shared AI usage limit has been reached for now. Please try again later.";
+  if (error === "provider_quota") return "The AI service is at its current usage limit. Please try again later.";
+  if (error === "generation_timeout") return "That took longer than expected. Please try again shortly.";
+  if (error === "provider_configuration") return "AI is temporarily unavailable. Please try again later.";
+  if (error === "provider_rejected") return "We couldn’t process that request safely. Please rephrase and try again.";
   if (error === "retrieval_unavailable") return "We couldn't check your course material just now. Your question is saved; please try again shortly.";
-  if (error === "provider_unavailable") return "We couldn't prepare an explanation just now. Your question is saved; please try again shortly.";
+  if (error === "provider_unavailable") return "The AI service is temporarily unavailable. Please try again shortly.";
   return "We couldn't send that question. Please try again.";
 }
 
@@ -45,7 +50,7 @@ export function GroundedLearnComposer({ courseId, materialId, conceptId, convers
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.set("conversationId", result.conversationId);
         if (result.error) {
-          setError(publicError(result.error));
+          setError(groundedPublicErrorMessage(result.error));
           nextUrl.searchParams.set("notice", "retry");
           router.replace(`${nextUrl.pathname}${nextUrl.search}`);
           router.refresh();
@@ -60,7 +65,7 @@ export function GroundedLearnComposer({ courseId, materialId, conceptId, convers
         router.refresh();
         return;
       }
-      setError(publicError(result.error));
+      setError(groundedPublicErrorMessage(result.error));
     } catch {
       setError("We couldn't send that question. Please check your connection and try again.");
     } finally {

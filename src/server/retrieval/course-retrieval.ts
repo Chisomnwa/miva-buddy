@@ -1,6 +1,7 @@
 import "server-only";
 import { retrievedCourseChunkSchema, type RetrievedCourseChunk } from "@/contracts/grounded-learning";
 import { createEmbeddingProvider } from "@/server/embeddings/create-provider";
+import { GeminiUsageProtectionError } from "@/server/ai/gemini-usage-errors";
 import type { createClient } from "@/lib/supabase/server";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -26,13 +27,14 @@ function sufficientSupport(chunks: RetrievedCourseChunk[]) {
 
 export async function retrieveCourseEvidence(
   supabase: SupabaseServerClient,
-  input: { courseId: string; materialId: string; conceptId: string; question: string; signal: AbortSignal },
+  input: { courseId: string; materialId: string; conceptId: string; question: string; signal: AbortSignal; usageUserId?: string },
 ): Promise<CourseEvidenceResult> {
   const provider = createEmbeddingProvider();
   let vectors: number[][];
   try {
-    vectors = await provider.embed({ texts: [input.question], signal: input.signal, task: "query" });
-  } catch {
+    vectors = await provider.embed({ texts: [input.question], signal: input.signal, task: "query", usageUserId: input.usageUserId, usageCategory: "interactive" });
+  } catch (error) {
+    if (error instanceof GeminiUsageProtectionError) throw error;
     throw new CourseRetrievalUnavailableError();
   }
   if (vectors.length !== 1 || vectors[0].length !== 768 || vectors[0].some((item) => !Number.isFinite(item))) {

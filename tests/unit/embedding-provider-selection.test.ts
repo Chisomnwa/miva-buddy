@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createEmbeddingProvider } from "@/server/embeddings/create-provider";
 import { GeminiEmbeddingProvider } from "@/server/embeddings/providers/gemini";
+import { GeminiUsageProtectedEmbeddingProvider } from "@/server/ai/gemini-usage-protected-providers";
 import { OllamaEmbeddingProvider } from "@/server/embeddings/providers/ollama";
 
 vi.mock("server-only", () => ({}));
@@ -17,7 +18,9 @@ describe("embedding provider selection", () => {
     vi.stubEnv("EMBEDDING_PROVIDER", "gemini");
     vi.stubEnv("GEMINI_API_KEY", "mock-gemini-key");
 
-    expect(createEmbeddingProvider()).toBeInstanceOf(GeminiEmbeddingProvider);
+    const provider = createEmbeddingProvider();
+    expect(provider).toBeInstanceOf(GeminiUsageProtectedEmbeddingProvider);
+    expect((provider as unknown as { provider: unknown }).provider).toBeInstanceOf(GeminiEmbeddingProvider);
   });
 
   it("fails closed when Gemini is selected without its server-side key", () => {

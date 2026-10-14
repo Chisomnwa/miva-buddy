@@ -29,8 +29,9 @@ describe("permanent-auth migration", () => {
     expect(sql).toContain("using ((select auth.jwt()->>''is_anonymous'') = ''false'')");
     expect(sql).toContain("with check ((select auth.jwt()->>''is_anonymous'') = ''false'')");
     for (const table of ownedTables) expect(sql).toContain(`'${table}'`);
-    expect(sql).toContain("on storage.objects as restrictive for all to authenticated");
-    expect(sql).toContain("bucket_id <> 'course-materials'");
+    expect(sql).not.toContain("storage.objects");
+    expect(sql).not.toContain("course-materials");
+    expect(sql).toContain("on public.%I as restrictive for all to authenticated");
     expect(sql).toContain("revoke all on function public.search_course_material_chunks(uuid, text, extensions.vector, text, uuid, uuid, integer) from public, anon");
     expect(sql).not.toMatch(/\b(drop|alter|truncate)\s+(table|policy|function|role)\b/i);
     expect(sql).not.toContain("remoteok");

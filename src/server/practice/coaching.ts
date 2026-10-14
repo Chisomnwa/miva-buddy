@@ -55,6 +55,7 @@ export async function generatePracticeCoachingReply(input: {
   history: PracticeHistoryEntry[];
   problem: PracticeProblem;
   signal: AbortSignal;
+  usageUserId?: string;
   onRejected?: (attempt: number, reason: string) => void;
 }): Promise<{ response: PracticeCoachResponse; requestType: string }> {
   const mode = practiceModeSchema.parse(input.mode);
@@ -73,6 +74,8 @@ export async function generatePracticeCoachingReply(input: {
         messages,
         responseSchema: practiceCoachJsonSchema(mode, explicitFullAnswer),
         signal: input.signal,
+        usageUserId: input.usageUserId,
+        usageCategory: "interactive",
       });
       const response = validatePracticeCandidate({ raw, mode, explicitFullAnswer, userInput, problem: input.problem });
       return { response: practiceCoachResponseSchema.parse(response), requestType };

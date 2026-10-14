@@ -14,6 +14,8 @@ import { searchCourseHimalayasReferences } from "@/server/job-evidence/course-hi
 import { skillsExplicitlyInCourse } from "@/server/job-evidence/skills";
 import { getServerConfig } from "@/lib/config";
 import { recordSafeOperation } from "@/server/observability/safe-telemetry";
+import { GeminiUsageProtectionError } from "@/server/ai/gemini-usage-errors";
+import { classifySafeProviderFailure } from "@/server/ai/gemini-provider-errors";
 
 const maxRequestBytes = 16_384;
 const maxMessagesPerMinute = 8;
@@ -135,8 +137,13 @@ export async function POST(request: Request) {
       conceptId: concept.id,
       question: parsed.data.message,
       signal,
+      usageUserId: user.id,
     });
   } catch (error) {
+    if (error instanceof GeminiUsageProtectionError && error.reason !== "unavailable") return json({ error: "gemini_usage_limit", conversationId }, 429);
+    if (error instanceof GeminiUsageProtectionError) return json({ error: "learning_unavailable", conversationId }, 503);
+    const providerFailure = classifySafeProviderFailure(error);
+    if (providerFailure) return json({ error: providerFailure.code, conversationId }, providerFailure.status);
     if (error instanceof CourseRetrievalUnavailableError) return json({ error: "retrieval_unavailable", conversationId }, 503);
     return json({ error: "retrieval_unavailable", conversationId }, 503);
   }
@@ -155,11 +162,16 @@ export async function POST(request: Request) {
         excerpts: evidence.status === "supporting_evidence_found" ? evidence.chunks : [],
         history: historyMessages,
         signal,
+        usageUserId: user.id,
       });
       recordSafeOperation({ operation: "grounded_learn", provider: providerName, outcome: "success", durationMs: Date.now() - providerStartedAt });
     }
-  } catch {
+  } catch (error) {
     recordSafeOperation({ operation: "grounded_learn", provider: providerName, outcome: "failure", durationMs: Date.now() - providerStartedAt });
+    if (error instanceof GeminiUsageProtectionError && error.reason !== "unavailable") return json({ error: "gemini_usage_limit", conversationId }, 429);
+    if (error instanceof GeminiUsageProtectionError) return json({ error: "learning_unavailable", conversationId }, 503);
+    const providerFailure = classifySafeProviderFailure(error);
+    if (providerFailure) return json({ error: providerFailure.code, conversationId }, providerFailure.status);
     return json({ error: "provider_unavailable", conversationId }, 503);
   }
   let groundedSegments = reply.segments.filter((segment) => segment.kind === "grounded");

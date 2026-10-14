@@ -242,6 +242,10 @@ describe("local Supabase migration safety guard", () => {
 
     expect(actualConfig).toEqual(localConfig);
     expect(validateDrizzleMigrationChain(actualJournal, actualFiles)).toEqual(expectedMigrationTags);
+    expect(expectedMigrationTags.slice(-2)).toEqual([
+      "0012_gemini_usage_reservations",
+      "0013_course_material_admission_limits",
+    ]);
   });
 
   it("routes both migration npm scripts through the local safety wrapper", () => {
@@ -256,7 +260,7 @@ describe("local Supabase migration safety guard", () => {
     const reordered = { ...journal, entries: [...journal.entries].reverse() };
     expect(() => validateDrizzleMigrationChain(reordered, migrationFiles)).toThrow();
     expect(() => validateDrizzleMigrationChain({ ...journal, entries: journal.entries.slice(0, -1) }, migrationFiles)).toThrow();
-    expect(() => validateDrizzleMigrationChain(journal, [...migrationFiles, "0012_unreviewed.sql"])).toThrow();
+    expect(() => validateDrizzleMigrationChain(journal, [...migrationFiles, "0014_unreviewed.sql"])).toThrow();
     expect(() => validateDrizzleMigrationChain(journal, migrationFiles.slice(1))).toThrow();
   });
 });

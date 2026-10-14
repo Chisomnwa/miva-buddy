@@ -45,9 +45,10 @@ const initialDeckState: DeckState = { status: "idle", result: null, errorCode: n
 export function flashcardErrorMessage(code: CourseFlashcardsError | null): string {
   switch (code) {
     case "rate_limited": return "You have requested flashcards several times recently. Please wait a minute, then try again.";
+    case "usage_limit": return "The shared AI usage limit has been reached for now. Please try flashcards again later, or use Ask questions.";
     case "generation_timeout": return "Creating these flashcards took longer than expected. Please try again, or continue with Ask questions.";
-    case "provider_quota": return "The flashcard service has reached a temporary usage limit. Please try again later, or use Ask questions.";
-    case "provider_configuration": return "Flashcards are temporarily unavailable. You can still use Ask questions; please try flashcards again later.";
+    case "provider_quota": return "The flashcard service is at its current usage limit. Please try again later, or use Ask questions.";
+    case "provider_configuration": return "Flashcards are temporarily unavailable. You can still use Ask questions; please try again later.";
     case "provider_rejected":
     case "invalid_generation": return "We couldn’t verify a safe, lecture-supported flashcard set this time. Please retry or use Ask questions.";
     case "sources_unavailable": return "We couldn’t load this concept’s lecture sources. Please retry in a moment or use Ask questions.";

@@ -8,6 +8,7 @@ export async function generateLearningReply(
   provider: GenerationProvider,
   messages: GenerationMessage[],
   signal: AbortSignal,
+  usageUserId?: string,
 ): Promise<LearnResponse> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const requestMessages = attempt === 0
@@ -21,6 +22,8 @@ export async function generateLearningReply(
         messages: requestMessages,
         responseSchema: learningReplyJsonSchema,
         signal,
+        usageUserId,
+        usageCategory: "interactive",
       });
       return learnResponseSchema.parse(JSON.parse(raw));
     } catch (error) {

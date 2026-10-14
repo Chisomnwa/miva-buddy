@@ -5,6 +5,9 @@ export const MAX_PDF_PAGES = 120;
 export const MAX_NOTES_CHARACTERS = 100_000;
 export const MAX_MATERIAL_TEXT_CHARACTERS = 500_000;
 export const MAX_MATERIAL_TITLE = 180;
+export const DEFAULT_COURSE_MATERIAL_DAILY_COUNT_LIMIT = 5;
+export const DEFAULT_COURSE_MATERIAL_DAILY_BYTES_LIMIT = 50 * 1024 * 1024;
+export const DEFAULT_COURSE_MATERIAL_MANUAL_RETRY_LIMIT = 2;
 
 export function pdfFileMetadataError(file: { name: string; size: number; type?: string } | null): string | null {
   if (!file) return "Choose a PDF file.";

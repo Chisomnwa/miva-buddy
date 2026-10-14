@@ -10,6 +10,10 @@ export type GenerationInput = {
   responseSchema: Record<string, unknown>;
   signal: AbortSignal;
   maxTokens?: number;
+  /** Authenticated owner for server-side Gemini usage accounting; never sent to the model. */
+  usageUserId?: string;
+  /** Explicit budget bucket for Gemini; absent values fail closed in its wrapper. */
+  usageCategory?: "interactive" | "background";
 };
 
 export interface GenerationProvider {

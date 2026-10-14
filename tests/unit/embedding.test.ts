@@ -3,6 +3,7 @@ import { FakeEmbeddingProvider } from "@/server/embeddings/providers/fake";
 import { GeminiEmbeddingProvider } from "@/server/embeddings/providers/gemini";
 import { OllamaEmbeddingProvider } from "@/server/embeddings/providers/ollama";
 import { EmbeddingProviderUnavailableError, MalformedEmbeddingOutputError } from "@/server/embeddings/provider";
+import { GEMINI_PROVIDER_TIMEOUT_MS } from "@/server/ai/gemini-provider-errors";
 
 const input = { texts: ["binary tree", "hash map"], signal: new AbortController().signal };
 
@@ -50,7 +51,7 @@ describe("replaceable embedding provider boundary", () => {
     const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       expect(String(url)).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:batchEmbedContents");
       expect(init?.headers).toMatchObject({ "x-goog-api-key": "test-key" });
-      expect(init?.signal).toBe(input.signal);
+      expect(init?.signal).not.toBe(input.signal);
       const body = JSON.parse(String(init?.body)) as { requests: Array<{ content: { parts: Array<{ text: string }> }; embedContentConfig: { outputDimensionality: number } }> };
       expect(body.requests.map((request) => request.content.parts[0].text)).toEqual([
         "title: none | text: binary tree",
@@ -92,11 +93,29 @@ describe("replaceable embedding provider boundary", () => {
   it("maps Gemini HTTP and network failures to safe provider errors and preserves aborts", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("provider detail", { status: 429 })));
     const rejected = new GeminiEmbeddingProvider("test-key", "gemini-embedding-2").embed({ ...input, task: "query" });
-    await expect(rejected).rejects.toBeInstanceOf(EmbeddingProviderUnavailableError);
-    await expect(rejected).rejects.toMatchObject({ statusCode: 429 });
+    await expect(rejected).rejects.toMatchObject({ name: "GeminiProviderError", category: "rate_limit", message: "Gemini request failed safely" });
 
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network detail"); }));
     await expect(new GeminiEmbeddingProvider("test-key", "gemini-embedding-2").embed({ ...input, task: "query" }))
-      .rejects.toBeInstanceOf(EmbeddingProviderUnavailableError);
+      .rejects.toMatchObject({ name: "GeminiProviderError", category: "temporary_failure", message: "Gemini request failed safely" });
+  });
+
+  it("classifies embedding HTTP failures and enforces the same explicit provider timeout", async () => {
+    for (const [status, category] of [[408, "timeout"], [403, "configuration"], [400, "request"], [503, "temporary_failure"]] as const) {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response("sensitive provider response", { status })));
+      await expect(new GeminiEmbeddingProvider("test-key", "gemini-embedding-2").embed({ ...input, task: "query" }))
+        .rejects.toMatchObject({ name: "GeminiProviderError", category, message: "Gemini request failed safely" });
+    }
+
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(
+      AbortSignal.abort(new DOMException("private timeout detail", "TimeoutError")),
+    );
+    vi.stubGlobal("fetch", vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      throw (init?.signal as AbortSignal).reason;
+    }));
+    await expect(new GeminiEmbeddingProvider("test-key", "gemini-embedding-2").embed({ ...input, task: "document" }))
+      .rejects.toMatchObject({ name: "GeminiProviderError", category: "timeout", message: "Gemini request failed safely" });
+    expect(timeout).toHaveBeenCalledWith(GEMINI_PROVIDER_TIMEOUT_MS);
+    timeout.mockRestore();
   });
 });

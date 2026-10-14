@@ -4,6 +4,7 @@ import { learningReplyJsonSchema, learningSystemPrompt, selectRecentContext } fr
 import type { GenerationInput, GenerationProvider } from "@/server/ai/provider";
 import { FakeGenerationProvider } from "@/server/ai/providers/fake";
 import { GeminiGenerationProvider } from "@/server/ai/providers/gemini";
+import { GEMINI_PROVIDER_TIMEOUT_MS } from "@/server/ai/gemini-provider-errors";
 import { GroqGenerationProvider } from "@/server/ai/providers/groq";
 import { OllamaGenerationProvider } from "@/server/ai/providers/ollama";
 import { MalformedProviderOutputError } from "@/server/ai/provider";
@@ -82,6 +83,40 @@ describe("direct learning contracts and provider boundary", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("classifies Gemini quota, permanent, and temporary HTTP failures without exposing response text", async () => {
+    for (const [status, category] of [[429, "rate_limit"], [401, "configuration"], [400, "request"], [503, "temporary_failure"]] as const) {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response("private provider payload", { status })));
+      await expect(new GeminiGenerationProvider("test-secret", "models/test").generate({
+        messages, responseSchema: {}, signal: signal(),
+      })).rejects.toMatchObject({ name: "GeminiProviderError", category, message: "Gemini request failed safely" });
+    }
+    expect(GEMINI_PROVIDER_TIMEOUT_MS).toBe(45_000);
+    vi.unstubAllGlobals();
+  });
+
+  it("classifies the provider deadline separately and preserves caller cancellation", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(
+      AbortSignal.abort(new DOMException("sensitive deadline detail", "TimeoutError")),
+    );
+    const fetchSpy = vi.fn(async (_url: string | URL | Request, init: RequestInit) => {
+      throw (init.signal as AbortSignal).reason;
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(new GeminiGenerationProvider("test-secret", "models/test").generate({
+      messages, responseSchema: {}, signal: signal(),
+    })).rejects.toMatchObject({ name: "GeminiProviderError", category: "timeout", message: "Gemini request failed safely" });
+    expect(timeout).toHaveBeenCalledWith(GEMINI_PROVIDER_TIMEOUT_MS);
+
+    const controller = new AbortController();
+    const cancelled = new DOMException("cancelled", "AbortError");
+    controller.abort(cancelled);
+    await expect(new GeminiGenerationProvider("test-secret", "models/test").generate({
+      messages, responseSchema: {}, signal: controller.signal,
+    })).rejects.toBe(cancelled);
+    timeout.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it("retries malformed provider output exactly once and then validates", async () => {

@@ -125,7 +125,7 @@ describe("course flashcard generation route", () => {
   it("returns a safe provider quota category without exposing provider details", async () => {
     providerGenerate.mockRejectedValueOnce(new ProviderUnavailableError(429));
     const response = await POST(request(validSourceVersion));
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(429);
     expect(await response.json()).toEqual({ error: "provider_quota" });
   });
 

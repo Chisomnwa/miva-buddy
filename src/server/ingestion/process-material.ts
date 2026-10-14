@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import type { GenerationProvider } from "@/server/ai/provider";
-import { MalformedProviderOutputError } from "@/server/ai/provider";
+import { MalformedProviderOutputError, ProviderUnavailableError } from "@/server/ai/provider";
 import type { EmbeddingProvider } from "@/server/embeddings/provider";
-import { MalformedEmbeddingOutputError } from "@/server/embeddings/provider";
+import { EmbeddingProviderUnavailableError, MalformedEmbeddingOutputError } from "@/server/embeddings/provider";
+import { GeminiUsageProtectionError } from "@/server/ai/gemini-usage-errors";
+import { GeminiProviderError } from "@/server/ai/gemini-provider-errors";
 import { getServerConfig } from "@/lib/config";
 import { MAX_MATERIAL_TEXT_CHARACTERS, MAX_PDF_BYTES, processMaterialJobSchema, type ProcessMaterialJob } from "@/contracts/course-material";
 import { chunkMaterialPages } from "./chunking";
@@ -27,6 +29,13 @@ export class TerminalMaterialProcessingError extends Error {
   }
 }
 
+export class TemporaryMaterialProcessingError extends Error {
+  constructor(readonly failureCode: "storage_temporary_failure") {
+    super("Course material processing is temporarily unavailable");
+    this.name = "TemporaryMaterialProcessingError";
+  }
+}
+
 async function loadPages(job: ProcessMaterialJob, dependencies: Dependencies) {
   if (job.kind === "notes") {
     const result = await dependencies.pool.query<{ page_number: number; content: string }>(
@@ -44,11 +53,22 @@ async function loadPages(job: ProcessMaterialJob, dependencies: Dependencies) {
   }
   const signedUrl = new URL(job.signedUrl);
 
-  const response = await fetch(signedUrl, {
-    signal: dependencies.signal,
-    headers: { accept: "application/pdf, application/octet-stream" },
-  });
-  if (!response.ok) throw new Error("Private course file could not be fetched");
+  let response: Response;
+  try {
+    response = await fetch(signedUrl, {
+      signal: dependencies.signal,
+      headers: { accept: "application/pdf, application/octet-stream" },
+    });
+  } catch (error) {
+    if (dependencies.signal.aborted) throw error;
+    throw new TemporaryMaterialProcessingError("storage_temporary_failure");
+  }
+  if (!response.ok) {
+    if (response.status === 408 || response.status === 429 || response.status >= 500) {
+      throw new TemporaryMaterialProcessingError("storage_temporary_failure");
+    }
+    throw new TerminalMaterialProcessingError("storage_unavailable");
+  }
   const advertisedLength = Number(response.headers.get("content-length") ?? 0);
   if (advertisedLength > MAX_PDF_BYTES) throw new PdfMaterialError("file_too_large");
   const bytes = new Uint8Array(await response.arrayBuffer());
@@ -79,13 +99,15 @@ export function isTrustedCourseMaterialSignedUrl(
   }
 }
 
-async function embedInBatches(dependencies: Dependencies, texts: string[]) {
+async function embedInBatches(dependencies: Dependencies, texts: string[], usageUserId: string) {
   const allVectors: number[][] = [];
   for (let index = 0; index < texts.length; index += 24) {
     const batch = await dependencies.embeddings.embed({
       texts: texts.slice(index, index + 24),
       signal: dependencies.signal,
       task: "document",
+      usageUserId,
+      usageCategory: "background",
     });
     allVectors.push(...batch);
   }
@@ -146,11 +168,12 @@ export async function processCourseMaterial(rawJob: unknown, dependencies: Depen
     return;
   }
 
-  const vectors = await embedInBatches(dependencies, chunks.map((chunk) => chunk.content));
+  const vectors = await embedInBatches(dependencies, chunks.map((chunk) => chunk.content), job.userId);
   const extracted = await extractCourseConcepts(
     dependencies.generation,
     chunks.map(({ id, ordinal, pageStart, pageEnd, content }) => ({ id, ordinal, pageStart, pageEnd, content })),
     dependencies.signal,
+    job.userId,
   );
   const embeddingModel = dependencies.embeddings.modelId;
   const client = await dependencies.pool.connect();
@@ -227,6 +250,20 @@ export async function markTerminalFailure(pool: Pool, job: ProcessMaterialJob, e
   }
   if (error instanceof MalformedProviderOutputError || error instanceof MalformedEmbeddingOutputError) {
     await setMaterialFailure(pool, job, "structured_processing_failed");
+    return true;
+  }
+  if (error instanceof GeminiUsageProtectionError && error.reason !== "unavailable") {
+    await setMaterialFailure(pool, job, "gemini_usage_limited");
+    return true;
+  }
+  if (error instanceof GeminiProviderError && (error.category === "configuration" || error.category === "request")) {
+    await setMaterialFailure(pool, job, error.category === "configuration" ? "provider_configuration" : "provider_request_rejected");
+    return true;
+  }
+  if ((error instanceof ProviderUnavailableError || error instanceof EmbeddingProviderUnavailableError)
+    && error.statusCode !== undefined && error.statusCode >= 400 && error.statusCode < 500
+    && error.statusCode !== 408 && error.statusCode !== 429) {
+    await setMaterialFailure(pool, job, "provider_request_rejected");
     return true;
   }
   return false;

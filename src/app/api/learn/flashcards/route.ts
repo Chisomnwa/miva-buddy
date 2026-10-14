@@ -21,7 +21,8 @@ function telemetryCategory(error: CourseFlashcardsError): SafeFailureCategory {
     case "provider_configuration": return "provider_configuration";
     case "provider_rejected": return "provider_rejected";
     case "invalid_generation": return "invalid_generation";
-    case "rate_limited": return "rate_limited";
+    case "rate_limited":
+    case "usage_limit": return "rate_limited";
     case "sources_unavailable": return "sources_unavailable";
     default: return "unexpected";
   }
@@ -156,6 +157,7 @@ async function postFlashcards(request: Request) {
         content: chunk.content,
       })),
       signal: AbortSignal.any([request.signal, timeout]),
+      usageUserId: user.id,
     });
     recordSafeOperation({ operation: "course_flashcards", provider: providerName, outcome: "success", durationMs: Date.now() - providerStartedAt });
     if (!cards.length) return json({ cards: [], emptyReason: "no_supported_cards" });
@@ -177,7 +179,11 @@ async function postFlashcards(request: Request) {
       durationMs: Date.now() - providerStartedAt,
       failureCategory: cancelled ? "cancelled" : telemetryCategory(errorCode),
     });
-    return json({ error: cancelled ? "generation_unavailable" : errorCode }, timedOut ? 504 : 503);
+    const status = cancelled ? 503
+      : errorCode === "generation_timeout" ? 504
+        : errorCode === "usage_limit" || errorCode === "provider_quota" ? 429
+          : errorCode === "provider_rejected" || errorCode === "invalid_generation" ? 502 : 503;
+    return json({ error: cancelled ? "generation_unavailable" : errorCode }, status);
   }
 }
 

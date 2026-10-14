@@ -85,6 +85,20 @@
       "when": 1791802669000,
       "tag": "0011_require_permanent_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791900000000,
+      "tag": "0012_gemini_usage_reservations",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791986400000,
+      "tag": "0013_course_material_admission_limits",
+      "breakpoints": true
     }
   ]
 }

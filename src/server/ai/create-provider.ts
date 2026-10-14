@@ -5,6 +5,7 @@ import { FakeGenerationProvider } from "./providers/fake";
 import { GeminiGenerationProvider } from "./providers/gemini";
 import { GroqGenerationProvider } from "./providers/groq";
 import { OllamaGenerationProvider } from "./providers/ollama";
+import { GeminiUsageProtectedGenerationProvider } from "./gemini-usage-protected-providers";
 
 export function createGenerationProvider(): GenerationProvider {
   const config = getServerConfig();
@@ -17,7 +18,7 @@ export function createGenerationProvider(): GenerationProvider {
   }
   if (config.AI_PROVIDER === "gemini") {
     if (!config.GEMINI_API_KEY) throw new Error("Hosted AI provider is not configured");
-    return new GeminiGenerationProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL);
+    return new GeminiUsageProtectedGenerationProvider(new GeminiGenerationProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL));
   }
   if (!config.GROQ_API_KEY) throw new Error("Hosted AI provider is not configured");
   return new GroqGenerationProvider(config.GROQ_API_KEY, config.GROQ_MODEL);

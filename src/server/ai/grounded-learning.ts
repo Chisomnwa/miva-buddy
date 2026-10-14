@@ -111,7 +111,7 @@ export function noCourseSupportReply(): GroundedLearnResponse {
 
 export async function generateGroundedLearningReply(
   provider: GenerationProvider,
-  input: { question: string; excerpts: RetrievedCourseChunk[]; history: GenerationMessage[]; signal: AbortSignal },
+  input: { question: string; excerpts: RetrievedCourseChunk[]; history: GenerationMessage[]; signal: AbortSignal; usageUserId?: string },
 ): Promise<GroundedLearnResponse> {
   const allowedIds = new Set(input.excerpts.map((chunk) => chunk.chunk_id));
   const messages: GenerationMessage[] = [
@@ -132,7 +132,7 @@ export async function generateGroundedLearningReply(
       content: "Your prior response failed the citation/schema check. Return valid JSON. Cite only supplied excerpt IDs in grounded segments; use no citations for additional explanation.",
     }];
     try {
-      const raw = await provider.generate({ messages: request, responseSchema: groundedLearnJsonSchema, signal: input.signal });
+      const raw = await provider.generate({ messages: request, responseSchema: groundedLearnJsonSchema, signal: input.signal, usageUserId: input.usageUserId, usageCategory: "interactive" });
       const parsed = applyDeterministicCitationSupport(
         parseResponse(raw, allowedIds, input.excerpts.length > 0), input.excerpts,
       );
