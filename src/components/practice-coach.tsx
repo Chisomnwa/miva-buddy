@@ -71,7 +71,7 @@ export function PracticeCoach({ sessionId, initialMode, initialMessages, readOnl
       {messages.length === 0 && <p className="practice-empty">Share your reasoning, a short attempt, or the exact error you’re seeing to begin.</p>}
       {messages.map((item) => <article className={`practice-message practice-message-${item.role}`} key={item.id}>
         <strong>{item.role === "user" ? "You" : "Miva Buddy"}</strong>
-        {item.role === "user" ? <><div className="practice-message-content"><MessageContent content={item.content} /></div>{item.attempt && <pre className="practice-attempt">{item.attempt}</pre>}</> : item.response?.segments.map((segment, index) => <div key={`${item.id}-${index}`} className={`practice-segment practice-segment-${segment.kind}`}><MessageContent content={segment.content} /></div>)}
+        {item.role === "user" ? <><div className="practice-message-content"><MessageContent content={item.content} /></div>{item.attempt && <pre className="practice-attempt">{item.attempt}</pre>}</> : item.response?.segments.map((segment, index) => <div key={`${item.id}-${index}`} className={`practice-segment practice-segment-${segment.kind}`}><MessageContent content={segment.content} markdown={segment.format !== "code"} /></div>)}
       </article>)}
     </div>
     {!readOnly && notice && <div className="form-error practice-notice" role="status">{notice}{offerTutor && <button className="button button-secondary" type="button" disabled={busy} onClick={switchToTutor}>Switch to Tutor</button>}</div>}

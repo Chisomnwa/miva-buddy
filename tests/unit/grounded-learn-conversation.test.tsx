@@ -49,4 +49,19 @@ describe("grounded FIFO walkthrough rendering", () => {
     expect(html).toContain("Dequeue B -&gt; [C]");
     expect(html).toContain("Dequeue C -&gt; []");
   });
+
+  it("highlights technical terms inside cited course explanations without changing citation rendering", () => {
+    const html = renderToStaticMarkup(<GroundedLearnConversation messages={[{
+      id: "00000000-0000-4000-8000-000000000011",
+      role: "assistant",
+      content: "A FIFO queue removes the item added first.",
+      response_segments: [{ kind: "grounded", content: "A **FIFO queue** removes the item added first.", citationIds: [sourceId] }],
+      follow_up_questions: [],
+      grounding_status: "supporting_evidence_found",
+    }]} />);
+
+    expect(html).toContain('<strong class="learn-technical-term">FIFO queue</strong>');
+    expect(html).toContain("From your course material");
+    expect(html).toContain("Supporting sources");
+  });
 });

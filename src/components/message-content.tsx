@@ -82,10 +82,23 @@ function parseMarkdownBlocks(content: string): MarkdownBlock[] {
   return blocks;
 }
 
+function renderInlineMarkdown(text: string, prefix: string): ReactNode[] {
+  const tokens = text.split(/(`[^`\n]+`|\*\*[^*\n]+?\*\*)/g);
+  return tokens.map((token, index) => {
+    const key = `${prefix}-inline-${index}`;
+    const code = /^`([^`\n]+)`$/.exec(token);
+    if (code) return <code className="learn-inline-code" key={key}>{code[1]}</code>;
+    const technicalTerm = /^\*\*([^*\n]+?)\*\*$/.exec(token);
+    if (technicalTerm) return <strong className="learn-technical-term" key={key}>{technicalTerm[1]}</strong>;
+    return token;
+  });
+}
+
 function renderLines(lines: string[], prefix: string): ReactNode[] {
-  return lines.flatMap((line, index) => index === 0
-    ? [line]
-    : [<br key={`${prefix}-break-${index}`} />, line]);
+  return lines.flatMap((line, index) => [
+    ...(index ? [<br key={`${prefix}-break-${index}`} />] : []),
+    ...renderInlineMarkdown(line, `${prefix}-${index}`),
+  ]);
 }
 
 /** Render a small, safe Markdown subset for Learn without interpreting model output as HTML. */
@@ -113,7 +126,7 @@ export function MessageContent({ content, markdown = false }: { content: string;
       if (block.kind === "paragraph") return <p className="learn-markdown-paragraph" key={`paragraph-${index}`}>{renderLines(block.lines, `paragraph-${index}`)}</p>;
       if (block.kind === "heading") {
         const Heading = `h${block.level + 2}` as "h3" | "h4" | "h5";
-        return <Heading className="learn-markdown-heading" key={`heading-${index}`}>{block.text}</Heading>;
+        return <Heading className="learn-markdown-heading" key={`heading-${index}`}>{renderInlineMarkdown(block.text, `heading-${index}`)}</Heading>;
       }
       if (block.kind === "list") {
         const List = block.ordered ? "ol" : "ul";

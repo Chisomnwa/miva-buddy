@@ -43,6 +43,7 @@ function instructions(mode: PracticeMode, explicitFullAnswer: boolean, requestTy
     "Coach: may name a relevant idea and diagnose only supplied work, but no complete answer, code, pseudocode, or ordered solution steps. A walkthrough/dry run obeys this same limit.",
     "Tutor: may explain actionable steps. Include a complete answer only when the system-provided explicit full-answer flag is true; Tutor selection alone is not consent.",
     "Code format is allowed only for an explicitly requested complete answer in Tutor mode. For prose, keep references grounded and attach identifier:name or line:number references only when present in student text.",
+    "For prose readability, use Markdown **bold** only for meaningful technical terms or named concepts (usually one to five words, a few per segment); do not bold ordinary words or whole sentences. Use inline backticks for code identifiers, function or method calls, class names, and short code tokens. Preserve the required response schema and segment format.",
     retry ? "Your previous candidate failed deterministic policy checks. Produce a different candidate that strictly follows the allowed kinds and all mode restrictions; do not discuss the rejection." : "",
   ].filter(Boolean).join("\n");
 }

@@ -66,6 +66,32 @@ describe("Learn conversation rendering", () => {
     expect(html).not.toContain("<script>");
   });
 
+  it("highlights concise technical terms and code identifiers while preserving paragraphs", () => {
+    const html = renderToStaticMarkup(<LearnConversation messages={[{
+      ...message,
+      content: "A **finite state machine** models transitions. `accelerate()` is a method on `Vehicle`.\n\nOrdinary words remain unhighlighted, while **recursion** names a concept.",
+    }]} />);
+
+    expect(html).toContain('<strong class="learn-technical-term">finite state machine</strong>');
+    expect(html).toContain('<code class="learn-inline-code">accelerate()</code>');
+    expect(html).toContain('<code class="learn-inline-code">Vehicle</code>');
+    expect(html).toContain('<p class="learn-markdown-paragraph">Ordinary words remain unhighlighted');
+    expect(html).toContain('<strong class="learn-technical-term">recursion</strong>');
+    expect(html.match(/class="learn-markdown-paragraph"/g)).toHaveLength(2);
+    expect(html).not.toContain('<strong class="learn-technical-term">Ordinary words</strong>');
+  });
+
+  it("keeps malformed inline markers and hostile markup as escaped text", () => {
+    const html = renderToStaticMarkup(<LearnConversation messages={[{
+      ...message,
+      content: "A **valid term** and **unfinished emphasis <img src=x onerror=alert(1)>",
+    }]} />);
+
+    expect(html).toContain('<strong class="learn-technical-term">valid term</strong>');
+    expect(html).toContain("**unfinished emphasis &lt;img src=x onerror=alert(1)&gt;");
+    expect(html).not.toContain("<img");
+  });
+
   it("renders the persisted interview-preparation state as a distinct general-guidance card", () => {
     const segment = buildInterviewPreparation({ message: "I have an interview at Coinbase for a backend engineering internship. Help me prepare." });
     const html = renderToStaticMarkup(<LearnConversation messages={[{
