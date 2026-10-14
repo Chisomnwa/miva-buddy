@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { groundedLearnRequestSchema } from "@/contracts/grounded-learning";
 import { isSameOriginRequest } from "@/lib/same-origin";
-import { getPermanentUser } from "@/lib/auth/permanent-user";
+import { AuthVerificationError, getPermanentUser } from "@/lib/auth/permanent-user";
 import { createGenerationProvider } from "@/server/ai/create-provider";
 import type { GenerationMessage } from "@/server/ai/provider";
 import { generateGroundedLearningReply, isMaterialSpecificQuestion, noCourseSupportReply } from "@/server/ai/grounded-learning";
@@ -75,7 +75,14 @@ export async function POST(request: Request) {
   const parsed = groundedLearnRequestSchema.safeParse(body);
   if (!parsed.success) return json({ error: "invalid_request" }, 400);
 
-  const { supabase, user } = await getPermanentUser();
+  let auth: Awaited<ReturnType<typeof getPermanentUser>>;
+  try {
+    auth = await getPermanentUser();
+  } catch (error) {
+    if (error instanceof AuthVerificationError) return json({ error: "auth_verification_unavailable" }, 503);
+    throw error;
+  }
+  const { supabase, user } = auth;
   if (!user) return json({ error: "not_authenticated" }, 401);
   const since = new Date(Date.now() - 60_000).toISOString();
   const { count, error: limitError } = await supabase.from("learn_messages")

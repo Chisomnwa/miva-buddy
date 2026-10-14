@@ -18,6 +18,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
         <h1>Sign in to Miva Buddy</h1>
         <p className="intro-copy">Use your Google account to save your courses and continue learning across visits.</p>
         {params.error === "oauth" && <p className="form-error" role="alert">Google sign-in didn’t complete. Please try again.</p>}
+        {params.error === "verification" && <p className="form-error" role="alert">We couldn’t verify your session just now. Please try again shortly.</p>}
         {params.error === "session" && <p className="form-error" role="alert">We couldn’t verify your sign-in. Please try again.</p>}
         {params.signedOut === "1" && <p className="form-success" role="status">You’ve been signed out.</p>}
         <GoogleSignInButton />

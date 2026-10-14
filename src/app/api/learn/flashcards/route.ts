@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { courseFlashcardsRequestSchema, type CourseFlashcardsError } from "@/contracts/course-flashcards";
 import { courseFlashcardSourceVersion } from "@/lib/course-flashcard-source-version";
-import { getPermanentUser } from "@/lib/auth/permanent-user";
+import { AuthVerificationError, getPermanentUser } from "@/lib/auth/permanent-user";
 import { isSameOriginRequest } from "@/lib/same-origin";
 import { createGenerationProvider } from "@/server/ai/create-provider";
 import { classifyCourseFlashcardGenerationError, generateCourseFlashcards } from "@/server/ai/course-flashcards";
@@ -83,7 +83,14 @@ async function postFlashcards(request: Request) {
   const parsed = courseFlashcardsRequestSchema.safeParse(body);
   if (!parsed.success) return json({ error: "invalid_request" }, 400);
 
-  const { supabase, user } = await getPermanentUser();
+  let auth: Awaited<ReturnType<typeof getPermanentUser>>;
+  try {
+    auth = await getPermanentUser();
+  } catch (error) {
+    if (error instanceof AuthVerificationError) return json({ error: "auth_verification_unavailable" }, 503);
+    throw error;
+  }
+  const { supabase, user } = auth;
   if (!user) return json({ error: "not_authenticated" }, 401);
 
   const { data: course, error: courseError } = await supabase.from("courses")

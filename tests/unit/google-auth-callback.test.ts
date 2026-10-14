@@ -60,6 +60,22 @@ describe("Google OAuth callback", () => {
     expect(mocks.profileQuery.maybeSingle).not.toHaveBeenCalled();
   });
 
+  it("preserves the exchanged session when user verification returns a temporary error", async () => {
+    mocks.auth.getUser.mockResolvedValueOnce({ data: { user: null }, error: new Error("private verification detail") });
+    const response = await GET(callbackUrl());
+    expect(response.headers.get("location")).toBe("http://localhost:3000/sign-in?error=verification");
+    expect(mocks.auth.signOut).not.toHaveBeenCalled();
+    expect(mocks.profileQuery.maybeSingle).not.toHaveBeenCalled();
+  });
+
+  it("preserves the exchanged session when user verification rejects", async () => {
+    mocks.auth.getUser.mockRejectedValueOnce(new Error("private network detail"));
+    const response = await GET(callbackUrl());
+    expect(response.headers.get("location")).toBe("http://localhost:3000/sign-in?error=verification");
+    expect(mocks.auth.signOut).not.toHaveBeenCalled();
+    expect(mocks.profileQuery.maybeSingle).not.toHaveBeenCalled();
+  });
+
   it("uses a generic sign-in error when code exchange fails", async () => {
     mocks.auth.exchangeCodeForSession.mockResolvedValueOnce({ error: new Error("private provider detail") });
     const response = await GET(callbackUrl());

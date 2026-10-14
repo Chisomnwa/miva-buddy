@@ -16,8 +16,15 @@ export async function GET(request: Request) {
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
   if (exchangeError) return redirect("/sign-in?error=oauth");
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !isPermanentUser(user)) {
+  let verification: Awaited<ReturnType<typeof supabase.auth.getUser>>;
+  try {
+    verification = await supabase.auth.getUser();
+  } catch {
+    return redirect("/sign-in?error=verification");
+  }
+  const { data: { user }, error: userError } = verification;
+  if (userError) return redirect("/sign-in?error=verification");
+  if (!isPermanentUser(user)) {
     try {
       await supabase.auth.signOut({ scope: "local" });
     } catch {

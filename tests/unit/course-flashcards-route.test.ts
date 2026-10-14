@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { courseFlashcardSourceVersion } from "@/lib/course-flashcard-source-version";
 import { ProviderUnavailableError } from "@/server/ai/provider";
 
-const { getPermanentUser, sameOrigin, providerGenerate, recordSafeOperation, queryLog, activeUser } = vi.hoisted(() => ({
+const { AuthVerificationError, getPermanentUser, sameOrigin, providerGenerate, recordSafeOperation, queryLog, activeUser } = vi.hoisted(() => ({
+  AuthVerificationError: class AuthVerificationError extends Error {},
   getPermanentUser: vi.fn(),
   sameOrigin: vi.fn(() => true),
   providerGenerate: vi.fn(),
@@ -12,7 +13,7 @@ const { getPermanentUser, sameOrigin, providerGenerate, recordSafeOperation, que
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/auth/permanent-user", () => ({ getPermanentUser }));
+vi.mock("@/lib/auth/permanent-user", () => ({ AuthVerificationError, getPermanentUser }));
 vi.mock("@/lib/same-origin", () => ({ isSameOriginRequest: sameOrigin }));
 vi.mock("@/server/ai/create-provider", () => ({ createGenerationProvider: () => ({ generate: providerGenerate }) }));
 vi.mock("@/lib/config", () => ({ getServerConfig: () => ({ AI_PROVIDER: "gemini" }) }));
@@ -156,6 +157,13 @@ describe("course flashcard generation route", () => {
     const response = await POST(request(validSourceVersion));
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "unexpected_error" });
+  });
+
+  it("returns a temporary authentication response when identity verification is unavailable", async () => {
+    getPermanentUser.mockRejectedValueOnce(new AuthVerificationError("private provider detail"));
+    const response = await POST(request(validSourceVersion));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "auth_verification_unavailable" });
   });
 
   it("keeps the existing per-user generation limit and identifies it separately", async () => {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { practiceCoachRequestSchema, practiceCoachResponseSchema } from "@/contracts/practice-coaching";
 import { isSameOriginRequest } from "@/lib/same-origin";
-import { getPermanentUser } from "@/lib/auth/permanent-user";
+import { AuthVerificationError, getPermanentUser } from "@/lib/auth/permanent-user";
 import { createGenerationProvider } from "@/server/ai/create-provider";
 import { MalformedProviderOutputError } from "@/server/ai/provider";
 import { classifyPracticeRequest, evaluateModeRequest, isExplicitFullAnswerRequest } from "@/server/practice/coaching-policy";
@@ -50,7 +50,14 @@ export async function POST(request: Request) {
   const parsed = practiceCoachRequestSchema.safeParse(body);
   if (!parsed.success) return json({ error: "invalid_request" }, 400);
 
-  const { supabase, user } = await getPermanentUser();
+  let auth: Awaited<ReturnType<typeof getPermanentUser>>;
+  try {
+    auth = await getPermanentUser();
+  } catch (error) {
+    if (error instanceof AuthVerificationError) return json({ error: "auth_verification_unavailable" }, 503);
+    throw error;
+  }
+  const { supabase, user } = auth;
   if (!user) return json({ error: "not_authenticated" }, 401);
 
   const { data: session, error: sessionError } = await supabase.from("practice_sessions")
