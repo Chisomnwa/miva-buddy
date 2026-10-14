@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
-import { profileDestination, isPermanentUser } from "@/lib/auth/identity";
+import { profileDestination, isPermanentUser, resolveAppBaseUrl } from "@/lib/auth/identity";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+  const appOrigin = resolveAppBaseUrl(requestUrl);
+  if (!appOrigin) {
+    return NextResponse.json({ error: "oauth_callback_unavailable" }, { status: 500 });
+  }
+  const redirect = (path: string) => NextResponse.redirect(new URL(path, appOrigin));
   const code = requestUrl.searchParams.get("code");
-  if (!code) return NextResponse.redirect(new URL("/sign-in?error=oauth", requestUrl.origin));
+  if (!code) return redirect("/sign-in?error=oauth");
 
   const supabase = await createClient();
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-  if (exchangeError) return NextResponse.redirect(new URL("/sign-in?error=oauth", requestUrl.origin));
+  if (exchangeError) return redirect("/sign-in?error=oauth");
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !isPermanentUser(user)) {
@@ -18,12 +23,12 @@ export async function GET(request: Request) {
     } catch {
       // The identity is still rejected even if cleanup of an invalid session fails.
     }
-    return NextResponse.redirect(new URL("/sign-in?error=session", requestUrl.origin));
+    return redirect("/sign-in?error=session");
   }
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles").select("programme").eq("user_id", user.id).maybeSingle();
-  if (profileError) return NextResponse.redirect(new URL("/sign-in?error=session", requestUrl.origin));
+  if (profileError) return redirect("/sign-in?error=session");
 
-  return NextResponse.redirect(new URL(profileDestination(profile?.programme), requestUrl.origin));
+  return redirect(profileDestination(profile?.programme));
 }

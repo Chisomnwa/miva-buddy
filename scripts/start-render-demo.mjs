@@ -38,7 +38,10 @@ export function buildChildEnvironment(source, { web = false, port = "3000" } = {
   for (const key of RUNTIME_ENV_KEYS) {
     if (typeof source[key] === "string") env[key] = source[key];
   }
-  if (web) env.PORT = port;
+  if (web) {
+    if (typeof source.APP_BASE_URL === "string") env.APP_BASE_URL = source.APP_BASE_URL;
+    env.PORT = port;
+  }
   return env;
 }
 

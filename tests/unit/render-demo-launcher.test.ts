@@ -46,7 +46,7 @@ describe("Render demo process launcher", () => {
       spawn: h.spawn as never,
       processRef: h.processRef as never,
       platform: "linux",
-      env: { PORT: "4312", DATABASE_URL: "safe-test-value", NODE_OPTIONS: "--inspect" },
+      env: { PORT: "4312", DATABASE_URL: "safe-test-value", APP_BASE_URL: "https://miva.example", NODE_OPTIONS: "--inspect" },
       setTimer: h.setTimer as never,
       clearTimer: h.clearTimer as never,
     });
@@ -54,8 +54,10 @@ describe("Render demo process launcher", () => {
     expect(h.calls).toHaveLength(2);
     expect(h.calls[0]?.args).toEqual(expect.arrayContaining(["start", "--hostname", "0.0.0.0", "--port", "4312"]));
     expect(h.calls[0]?.options.env).toMatchObject({ PORT: "4312", NODE_ENV: "production", DATABASE_URL: "safe-test-value" });
+    expect(h.calls[0]?.options.env.APP_BASE_URL).toBe("https://miva.example");
     expect(h.calls[1]?.args[0]).toBe("--conditions=react-server");
     expect(h.calls[1]?.options.env).not.toHaveProperty("PORT");
+    expect(h.calls[1]?.options.env).not.toHaveProperty("APP_BASE_URL");
     expect(h.calls[1]?.options.env).not.toHaveProperty("NODE_OPTIONS");
     expect(h.calls.every((call) => call.options.detached)).toBe(true);
 
