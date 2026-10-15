@@ -6,7 +6,7 @@ I started building it around a familiar moment: you finish a lecture, but the id
 
 Miva Buddy brings course learning and DSA practice together, and makes room for career preparation without pretending to know more than its sources do.
 
-**Hackathon demo:** [miva-buddy.onrender.com](https://miva-buddy.onrender.com). The hosted app is available, but production reliability is still being worked on; see [Current status and limitations](#current-status-and-limitations).
+**Hackathon demo:** [miva-buddy.onrender.com](https://miva-buddy.onrender.com).
 
 ## What it is like to use
 
@@ -58,87 +58,113 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the system boundaries and implementat
 
 ## Getting started
 
-### You’ll need
+[![Combined Miva Buddy development and testing guide showing hosted and local setup paths and the deployed website flow](docs/images/miva_buddy_development_and_testing_guide.png)](docs/images/miva_buddy_development_and_testing_guide.png)
 
-- Node.js 20 or newer and npm.
-- A Supabase development project (hosted or local) configured for Google sign-in.
-- Docker Desktop and the Supabase CLI if you want an isolated local Supabase stack.
-- PostgreSQL access for the background course-processing worker.
+`http://localhost:3000` is the website running on your computer; it does not mean the database is local. The app can use either a dedicated hosted development Supabase project or an isolated local Supabase stack.
 
-Miva Buddy is not an offline-only app: Supabase provides authentication and saved data. The app's intended sign-in flow is Google OAuth through Supabase Auth; it does not rely on anonymous sign-in.
+### Which workflow should I use?
 
-### Install and configure
+- **Workflow A** is the quickest way to work on the website without Docker. It requires a dedicated hosted development Supabase project; do not use the production project for local testing.
+- **Workflow B** is for isolated database, Storage, and course-processing work. It runs Supabase locally in Docker.
+- **Workflow C** is the deployed Render website, not a local development setup.
 
-#### 1. Install dependencies and configure the web app
+Supabase provides authentication and saved data in both development workflows. The intended sign-in flow is Google OAuth through Supabase Auth; the app does not rely on anonymous sign-in.
 
-Install the locked dependencies:
+### Common setup — Workflows A and B
 
-```sh
-npm ci
-```
+1. Install [Node.js 20 or newer](https://nodejs.org/) and npm, then install the locked dependencies:
 
-Create an ignored `.env.local` file in the repository root. The web app needs:
+   ```sh
+   npm ci
+   ```
 
-```dotenv
-NEXT_PUBLIC_SUPABASE_URL=<your-development-project-url>
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-development-publishable-key>
-APP_BASE_URL=http://localhost:3000
-DATABASE_URL=<local-database-url>
-```
+2. Create an ignored `.env.local` file in the repository root. Set the Supabase URL and publishable key for the development project you selected, the local callback origin, and the matching server-side PostgreSQL URL:
 
-`APP_BASE_URL` is optional in local development; it is shown here to make the callback origin explicit. `DATABASE_URL` is needed for the worker and database-backed operations. Never commit `.env.local`, database URLs, or provider credentials.
+   ```dotenv
+   NEXT_PUBLIC_SUPABASE_URL=<your-development-project-url>
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-development-publishable-key>
+   APP_BASE_URL=http://localhost:3000
+   DATABASE_URL=<development-database-url>
+   ```
 
-#### 2. Start local Supabase and prepare its database and Storage
+`APP_BASE_URL` is optional in local development; setting it explicitly keeps OAuth callbacks on localhost. `DATABASE_URL` must target the same development environment as the Supabase URL and is used by the worker and database-backed operations. Never commit `.env.local`, database URLs, or provider credentials.
 
-For an isolated local stack, start Docker Desktop and run:
+3. Choose a generation provider with `AI_PROVIDER`:
 
-```sh
-npx supabase start
-npm run db:migrate:local
-```
+   - **Fake:** `AI_PROVIDER=fake` provides deterministic responses for development and tests; it is not accepted in production.
+   - **Gemini:** `AI_PROVIDER=gemini`; set the server-only `GEMINI_API_KEY`.
+   - **Ollama:** `AI_PROVIDER=ollama`; configure `OLLAMA_BASE_URL` and, if needed, `OLLAMA_MODEL` (default `llama3.1`).
+   - **Groq:** `AI_PROVIDER=groq`; set the server-only `GROQ_API_KEY`.
+   - **Embeddings:** Configure separately with `EMBEDDING_PROVIDER=fake`, `gemini`, or `ollama`. Gemini uses `GEMINI_API_KEY`; Ollama uses `OLLAMA_BASE_URL` and `OLLAMA_EMBEDDING_MODEL` (default `nomic-embed-text`). Keep provider keys out of `NEXT_PUBLIC_` variables. See [Gemini usage protections](docs/engineering/gemini-usage-protections.md) before making real provider requests.
 
-- **Migration safety:** `npm run db:migrate:local` verifies the local Supabase/Docker identity and loopback database endpoint before invoking Drizzle. Do not replace it with an unguarded migration command.
-- **Private Storage:** Before uploading, confirm the private `course-materials` bucket exists in local Storage Studio. If it does not, create it through the local Storage UI; do not edit Storage's internal tables.
-- **Hosted databases:** Follow the reviewed procedure in the [Supabase setup guide](docs/engineering/milestone-1-supabase-setup.md). Never point the local-only guarded command at a hosted database.
+4. The web app can run without a worker for sign-in and ordinary browsing. Run the separate worker when you want uploaded PDFs or notes to be processed; it uses the configured development database and providers and can run with either hosted or local Supabase.
 
-#### 3. Configure Google sign-in if testing OAuth locally
+**Safety:** Use development data and synthetic lecture content for provider testing unless your account's current data-use terms allow real student content. Confirm provider billing, quotas, and terms first. Do not point local testing at the production Supabase project.
 
-The local Supabase config reads `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` from the Supabase CLI environment. These are server-side OAuth credentials, not Next.js browser variables. Follow the [Google Auth setup guide](docs/engineering/google-auth-setup.md); never put the client secret in the repository or a `NEXT_PUBLIC_` variable.
+[![Local development flow comparing the Next.js app and worker with hosted Supabase or local Supabase running in Docker](docs/images/local-development-flow.png)](docs/images/local-development-flow.png)
 
-#### 4. Choose AI providers
+### Workflow A — Local website with hosted development Supabase
 
-Ordinary local development can use deterministic fake responses. To use a real generation provider, set `AI_PROVIDER`:
+This workflow runs Next.js on your computer and Supabase in a **dedicated hosted development project**. You must provision and configure that project; do not assume one already exists. No Docker is required.
 
-- Fake: `AI_PROVIDER=fake` (development and tests; not accepted for production).
-- Gemini: `AI_PROVIDER=gemini` and a server-only `GEMINI_API_KEY`.
-- Ollama: `AI_PROVIDER=ollama`, plus a reachable `OLLAMA_BASE_URL` and `OLLAMA_MODEL` (default `llama3.1`).
-- Groq: `AI_PROVIDER=groq` and a server-only `GROQ_API_KEY`.
+1. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `DATABASE_URL` in `.env.local` to this development project. Its Supabase Auth, PostgreSQL, and private Storage are hosted; keep the `course-materials` bucket private.
+2. Configure Google OAuth for the development project. In Google Cloud, allow that project's Supabase Auth callback URI; in Supabase Auth URL settings, allow the exact app callback `http://localhost:3000/auth/callback` and set the development project's Site URL to `http://localhost:3000`. Configure the Google provider credentials for that project only. These settings do not change production; see the [Google Auth setup guide](docs/engineering/google-auth-setup.md).
+3. Start the website:
 
-For embeddings, configure `EMBEDDING_PROVIDER` separately. Choose `fake` for tests, `ollama` with `OLLAMA_BASE_URL` and `OLLAMA_EMBEDDING_MODEL` (default `nomic-embed-text`) for local embeddings, or `gemini` with `GEMINI_API_KEY`. Do not compare stored vectors across different embedding model spaces; existing materials may need reprocessing after a provider/model change.
+   ```sh
+   npm run dev
+   ```
 
-#### 5. Run the web app and worker
+4. Open [http://localhost:3000](http://localhost:3000). For course-material processing, start `npm run worker:dev` in a second terminal. Do not use the local-only migration command against this hosted database; follow the reviewed [Supabase setup guide](docs/engineering/milestone-1-supabase-setup.md) for hosted development-project setup.
 
-The web app and course-processing worker are separate processes during normal local development. Set server-only `DATABASE_URL` for database-backed operations, then run these in separate terminals:
+### Workflow B — Isolated local development with Docker
 
-Terminal 1 — web app:
+This workflow runs the Next.js website and Supabase locally. Docker is required for Supabase, but the worker remains a separate process.
 
-```sh
-npm run dev
-```
+1. Start Docker Desktop, then start the local Supabase stack:
 
-Terminal 2 — course-processing worker:
+   ```sh
+   npx supabase start
+   ```
 
-```sh
-npm run worker:dev
-```
+2. Set `.env.local` to the local Supabase URL, publishable key, and database URL from your local setup. Configure local Google OAuth as described in the [Google Auth setup guide](docs/engineering/google-auth-setup.md). Google Cloud must allow the local Supabase Auth callback URI (`http://127.0.0.1:54321/auth/v1/callback` by default); the local Supabase config reads `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` from the Supabase CLI environment. These server-side credentials must not be committed or put in a `NEXT_PUBLIC_` variable. The app callback allowlist includes `http://localhost:3000/auth/callback` and `http://127.0.0.1:3000/auth/callback`.
+
+3. Apply the local schema only with the guarded migration command, then confirm the private Storage bucket exists:
+
+   ```sh
+   npm run db:migrate:local
+   ```
+
+   - `npm run db:migrate:local` verifies local Supabase/Docker identity and the loopback database endpoint before invoking Drizzle. Do not replace it with an unguarded migration command or point it at a hosted database.
+   - In local Storage Studio, verify that `course-materials` exists and is private. If needed, create the bucket through the local Storage UI; do not edit Storage's internal tables.
+
+4. Start the website and worker in separate terminals:
+
+Terminal 1 — website:
+
+   ```sh
+   npm run dev
+   ```
+
+Terminal 2 — worker (needed to process course materials):
+
+   ```sh
+   npm run worker:dev
+   ```
 
 Open [http://localhost:3000](http://localhost:3000). First-time Google sign-in takes you to onboarding.
 
-Without the worker, uploaded materials can remain queued and will not finish processing. The guarded `npm run dev:local-pdf-gemini` command can start the local web app and worker together after checking the local stack and queue.
+For a guarded local PDF/Gemini run, `npm run dev:local-pdf-gemini` checks the local stack and queue before starting the website and worker together. It makes real Gemini API calls; use synthetic content unless the provider's current terms allow otherwise, and confirm account billing and quotas first.
 
-**Safety note:** `npm run dev:local-pdf-gemini` makes real Gemini API calls and does not inspect or restrict uploaded content. Use synthetic material unless your provider account's current data-use terms allow real student content. Confirm billing, quotas, and terms first. See the [M3 setup record](docs/engineering/milestone-3-setup.md), [Gemini usage protections](docs/engineering/gemini-usage-protections.md), and [provider decision](docs/engineering/ai-provider-decision.md).
+See the [M3 setup record](docs/engineering/milestone-3-setup.md), [Gemini usage protections](docs/engineering/gemini-usage-protections.md), and [provider decision](docs/engineering/ai-provider-decision.md) for implementation and safety details.
 
-For the deployed Render demo's build/start commands and environment variables, see the [deployment guide](docs/engineering/deployment-readiness.md). Do not use a development server as a public server.
+### Workflow C — Deployed website on Render
+
+This is the hosted application, not a local development environment. Visit [miva-buddy.onrender.com](https://miva-buddy.onrender.com); local `.env.local` settings and development commands do not configure the Render service.
+
+[![Deployed website flow showing the Render web app and worker connected to Supabase and AI services](docs/images/deployed-website-flow.png)](docs/images/deployed-website-flow.png)
+
+See the [deployment guide](docs/engineering/deployment-readiness.md) for Render setup and operational details.
 
 The `REMOTEOK_METADATA_PILOT=true` and `HIMALAYAS_METADATA_ENABLED=true` flags are optional. They are not needed to run Miva Buddy. Remote OK remains development-only, and neither job source verifies requirements from descriptions.
 
@@ -177,19 +203,19 @@ npm run check:secrets
 
 The default browser suite runs locally. Some legacy hosted Supabase tests create anonymous test identities and synthetic records; they are not Google-auth coverage and should only be run with an approved test-data plan. Local checks are not the same as hosted release acceptance.
 
-The latest local code verification before this README update passed 535 tests (8 skipped), TypeScript, ESLint, and the production build including the worker bundle. These checks do not establish that the reported production authentication and flashcard issues are resolved.
+At the last recorded local verification checkpoint, 535 tests passed (8 skipped), and TypeScript, ESLint, and the production build including the worker bundle passed. Local checks do not guarantee production behavior.
 
 Optional checks include `npm run test:embeddings:ollama` for a local synthetic embedding check and `npm run test:ai-evals` for synthetic prompts sent to the configured hosted AI provider. The dedicated local PDF/Gemini workflow is `npm run dev:local-pdf-gemini`; it requires a running local Supabase stack and a configured Gemini key, and makes provider requests. `npm run check:hosted-config` reports configuration status without printing values.
 
 ## Current status and limitations
 
-- Miva Buddy is deployed at [miva-buddy.onrender.com](https://miva-buddy.onrender.com), but production is **not yet stable**. Recent reports include repeated authentication-verification failures and Home/Learn errors, plus intermittent flashcard-generation failures. The latest local authentication fix is not deployed; local tests do not confirm these production issues are resolved.
-- Hosted migrations 0000–0013 and the three separately managed private `course-materials` Storage policies have been verified. Render runs the web app and PDF worker together; free-tier sleep and resource limits can delay processing. A complete production smoke test is still pending. See the [deployment guide](docs/engineering/deployment-readiness.md) for operational details.
-- Gemini and upload safeguards are implemented, but provider-account billing/quota controls and end-to-end production behavior still require review. Job listings are related metadata, not verified skill requirements; see the [project status](docs/plans/project-status.md) for remaining scope and limitations.
+- The Render demo is deployed, and production reliability is still being verified. A successful production smoke test is pending; see the [deployment guide](docs/engineering/deployment-readiness.md) for current operational details.
+- The app depends on Supabase for sign-in, data, and private files, configured AI and embedding providers, and a separate course-processing worker. Render's free-tier sleep or resource limits may delay queued material processing.
+- Related job listings are metadata links, not verified employer requirements or proof of a skill match. See [project status](docs/plans/project-status.md) for scope and limitations.
 
 ## How I Used OpenAI Codex
 
-I used Codex as a development assistant while I stayed responsible for the product decisions, scope, and review. It helped me break features into smaller tasks, map existing code before changing it, draft and refine implementation, investigate bugs, compare possible fixes, and write and run focused tests. I reviewed diffs and verification results before deciding what to keep or release.
+I used Codex as a development assistant while I stayed responsible for the product decisions, scope, and review. It helped me break features into smaller tasks, map existing code before changing it, draft and refine implementation, investigate bugs, compare possible fixes, and write and run focused tests. I reviewed diffs and verification results before deciding what to keep, commit, or release.
 
 The repository's root [`AGENTS.md`](AGENTS.md) records project boundaries, safety rules, and verified commands. Two project-local skills make repeatable work easier to follow: [`supabase-migration-validation`](.agents/skills/supabase-migration-validation/SKILL.md) for migration/schema validation and [`gemini-usage-protections`](.agents/skills/gemini-usage-protections/SKILL.md) for Gemini quotas, reservations, and safe diagnostics. They complement rather than replace the project instructions.
 
