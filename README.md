@@ -6,7 +6,7 @@ I started building it around a familiar moment: you finish a lecture, but the id
 
 Miva Buddy brings course learning and DSA practice together, and makes room for career preparation without pretending to know more than its sources do.
 
-**Hackathon demo:** [miva-buddy.onrender.com](https://miva-buddy.onrender.com).
+**Hackathon demo:** [miva-buddy.onrender.com](https://miva-buddy.onrender.com). (Not working at the moment - fixng it)
 
 ## What it is like to use
 
