@@ -234,3 +234,7 @@ The repository's root [`AGENTS.md`](AGENTS.md) records project boundaries, safet
 - [Current project status](docs/plans/project-status.md)
 - [Local and production setup](docs/engineering/deployment-readiness.md)
 - [Product and student workflows](docs/product/product-specification.md)
+
+## License
+
+Miva Buddy is open-source software licensed by the [MIT License](https://chatgpt.com/g/g-p-6abab42c42508191b9f41d249e85aabb-hackathons/c/LICENSE).
