@@ -237,4 +237,6 @@ The repository's root [`AGENTS.md`](AGENTS.md) records project boundaries, safet
 
 ## License
 
-Miva Buddy is open-source software licensed by the [MIT License](https://chatgpt.com/g/g-p-6abab42c42508191b9f41d249e85aabb-hackathons/c/LICENSE).
+Copyright © 2026 Chisom Nnamani. All rights reserved.
+
+Miva Buddy is proprietary software. The source code is publicly available for viewing and evaluation only. No permission is granted to copy, modify, redistribute, or commercially use the original project code without prior written authorization from the copyright holder.
