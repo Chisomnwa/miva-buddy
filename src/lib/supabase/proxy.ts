@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getPublicSupabaseConfig } from "@/lib/config";
+import { classifyAuthVerificationFailure, hasSupabaseAuthCookieName, logAuthVerificationDiagnostic } from "@/lib/auth/verification-diagnostics";
+
+function isProtectedPath(pathname: string): boolean {
+  return /^\/(?:home|learn|courses|practice|profile|onboarding)(?:\/|$)/.test(pathname)
+    || /^\/api\/(?:learn|practice)(?:\/|$)/.test(pathname);
+}
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -25,6 +31,16 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getClaims();
+  const authCookiePresent = hasSupabaseAuthCookieName(request.cookies.getAll().map(({ name }) => name));
+  try {
+    const { data, error } = await supabase.auth.getClaims();
+    if (error) {
+      logAuthVerificationDiagnostic(classifyAuthVerificationFailure(error), authCookiePresent);
+    } else if (isProtectedPath(request.nextUrl.pathname) && !data?.claims) {
+      logAuthVerificationDiagnostic("missing_session", authCookiePresent);
+    }
+  } catch (error) {
+    logAuthVerificationDiagnostic(classifyAuthVerificationFailure(error), authCookiePresent);
+  }
   return response;
 }

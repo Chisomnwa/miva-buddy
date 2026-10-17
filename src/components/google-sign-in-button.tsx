@@ -12,13 +12,6 @@ export function GoogleSignInButton() {
     setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw new Error("session_lookup_failed");
-      if (session) {
-        const { error: clearError } = await supabase.auth.signOut({ scope: "local" });
-        if (clearError) throw new Error("session_clear_failed");
-      }
-
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/auth/callback` },

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ createClient: vi.fn(), auth: {} as Record<string, ReturnType<typeof vi.fn>>, profileQuery: {} as Record<string, ReturnType<typeof vi.fn>> }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient, hasSupabaseAuthCookie: vi.fn().mockResolvedValue(true) }));
 
 import { GET } from "@/app/auth/callback/route";
 
@@ -50,6 +50,16 @@ describe("Google OAuth callback", () => {
     mocks.profileQuery.maybeSingle.mockResolvedValueOnce({ data: { programme: "Computer Science" }, error: null });
     const response = await GET(callbackUrl());
     expect(response.headers.get("location")).toBe("http://localhost:3000/home");
+  });
+
+  it("routes invalid callback sessions to sign-in without exposing provider details", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mocks.auth.getUser.mockResolvedValueOnce({ data: { user: null }, error: { name: "AuthInvalidJwtError", message: "private token data" } });
+    const response = await GET(callbackUrl());
+    expect(response.headers.get("location")).toBe("http://localhost:3000/sign-in?error=session");
+    expect(mocks.auth.signOut).not.toHaveBeenCalled();
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("private token data");
+    warn.mockRestore();
   });
 
   it("rejects anonymous or unverifiable identities and clears the local session best-effort", async () => {

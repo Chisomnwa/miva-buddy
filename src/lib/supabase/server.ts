@@ -2,6 +2,16 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getServerConfig } from "@/lib/config";
+import { hasSupabaseAuthCookieName } from "@/lib/auth/verification-diagnostics";
+
+export async function hasSupabaseAuthCookie(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    return hasSupabaseAuthCookieName(cookieStore.getAll().map(({ name }) => name));
+  } catch {
+    return false;
+  }
+}
 
 export async function createClient() {
   const cookieStore = await cookies();

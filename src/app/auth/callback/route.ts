@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { profileDestination, isPermanentUser, resolveAppBaseUrl } from "@/lib/auth/identity";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, hasSupabaseAuthCookie } from "@/lib/supabase/server";
+import { classifyAuthVerificationFailure, logAuthVerificationDiagnostic } from "@/lib/auth/verification-diagnostics";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -19,11 +20,21 @@ export async function GET(request: Request) {
   let verification: Awaited<ReturnType<typeof supabase.auth.getUser>>;
   try {
     verification = await supabase.auth.getUser();
-  } catch {
-    return redirect("/sign-in?error=verification");
+  } catch (error) {
+    const category = classifyAuthVerificationFailure(error);
+    logAuthVerificationDiagnostic(category, await hasSupabaseAuthCookie());
+    return redirect(category === "missing_session" || category === "token_rejected"
+      ? "/sign-in?error=session"
+      : "/sign-in?error=verification");
   }
   const { data: { user }, error: userError } = verification;
-  if (userError) return redirect("/sign-in?error=verification");
+  if (userError) {
+    const category = classifyAuthVerificationFailure(userError);
+    logAuthVerificationDiagnostic(category, await hasSupabaseAuthCookie());
+    return redirect(category === "missing_session" || category === "token_rejected"
+      ? "/sign-in?error=session"
+      : "/sign-in?error=verification");
+  }
   if (!isPermanentUser(user)) {
     try {
       await supabase.auth.signOut({ scope: "local" });

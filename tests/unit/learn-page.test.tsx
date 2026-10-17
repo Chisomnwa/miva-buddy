@@ -4,6 +4,7 @@ import LearnPage from "@/app/(workspace)/learn/page";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({
+  hasSupabaseAuthCookie: async () => false,
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
 }));
 vi.mock("@/lib/learning", () => ({
