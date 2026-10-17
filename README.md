@@ -6,7 +6,10 @@ I started building it around a familiar moment: you finish a lecture, but the id
 
 Miva Buddy brings course learning and DSA practice together, and makes room for career preparation without pretending to know more than its sources do.
 
-**Hackathon demo:** [miva-buddy.onrender.com](https://miva-buddy.onrender.com). (Not working at the moment - fixng it)
+**Hackathon demo:** [miva-buddy.onrender.com](https://miva-buddy.onrender.com).
+
+**Demo video:** [Miva Buddy (Your AI-Powered learning companion)](https://youtu.be/jdwpqgrXO_0)
+
 
 ## What it is like to use
 
@@ -224,9 +227,6 @@ The repository's root [`AGENTS.md`](AGENTS.md) records project boundaries, safet
 - [Harness engineering: leveraging Codex in an agent-first world](https://openai.com/index/harness-engineering/) — its focus on repository-local instructions, legible project knowledge, and enforceable feedback loops influenced how I keep development guidance and repeatable checks in the project.
 - [How OpenAI uses Codex](https://openai.com/business/guides-and-resources/how-openai-uses-codex/) — its examples of codebase understanding, scoped tasks, iterative testing, and review informed how I used Codex to support—not replace—my own implementation and decisions.
 
-## Demo
-
-**Demo video:** _Coming soon._
 
 ## Further reading
 
