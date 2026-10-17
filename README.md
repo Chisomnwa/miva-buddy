@@ -8,7 +8,7 @@ Miva Buddy brings course learning and DSA practice together, and makes room for 
 
 **Hackathon demo:** [miva-buddy.onrender.com](https://miva-buddy.onrender.com).
 
-**Demo video:** [Miva Buddy (Your AI-Powered learning companion)](https://youtu.be/jdwpqgrXO_0)
+**Demo video:** [Miva Buddy (AI-Powered learning companion)](https://youtu.be/jdwpqgrXO_0)
 
 
 ## What it is like to use
