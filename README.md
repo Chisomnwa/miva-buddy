@@ -224,6 +224,8 @@ The repository's root [`AGENTS.md`](AGENTS.md) records project boundaries, safet
 
 ### Development inspiration
 
+I got development insights from two articles written by OpenAI super engineers:
+
 - [Harness engineering: leveraging Codex in an agent-first world](https://openai.com/index/harness-engineering/) — its focus on repository-local instructions, legible project knowledge, and enforceable feedback loops influenced how I keep development guidance and repeatable checks in the project.
 - [How OpenAI uses Codex](https://openai.com/business/guides-and-resources/how-openai-uses-codex/) — its examples of codebase understanding, scoped tasks, iterative testing, and review informed how I used Codex to support—not replace—my own implementation and decisions.
 
@@ -238,5 +240,3 @@ The repository's root [`AGENTS.md`](AGENTS.md) records project boundaries, safet
 ## License
 
 Copyright © 2026 Chisom Nnamani. All rights reserved.
-
-Miva Buddy is proprietary software. The source code is publicly available for viewing and evaluation only. No permission is granted to copy, modify, redistribute, or commercially use the original project code without prior written authorization from the copyright holder.
